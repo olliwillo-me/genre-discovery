@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Genres &amp; Tags</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    #root { min-height: 100vh; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.15; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useCallback, useEffect, useRef, useMemo } = React;
+
+    const SEED_DATA = {"tags":[{"name":"Acid House","slug":"acid-house"},{"name":"Acid Techno","slug":"acid-techno"},{"name":"Afro House","slug":"afro-house"},{"name":"Afrobeat","slug":"afrobeat"},{"name":"Afrobeats","slug":"afrobeats"},{"name":"Alternative","slug":"alternative"},{"name":"Ambient","slug":"ambient"},{"name":"Ambient Drum and Bass","slug":"ambient-drum-and-bass"},{"name":"Ambient Techno","slug":"ambient-techno"},{"name":"Atmospheric Drum and Bass","slug":"atmospheric-drum-and-bass"},{"name":"Balearic","slug":"balearic"},{"name":"Balearic Trance","slug":"balearic-trance"},{"name":"Bass & Club Music","slug":"bass-club-music"},{"name":"Bass House","slug":"bass-house"},{"name":"Bass Music","slug":"bass-music"},{"name":"Bassline","slug":"bassline"},{"name":"Big Beat","slug":"big-beat"},{"name":"Big Room House","slug":"big-room-house"},{"name":"Blue-eyed Soul","slug":"blue-eyed-soul"},{"name":"Blues","slug":"blues"},{"name":"Boogie","slug":"boogie"},{"name":"Bouncy Techno","slug":"bouncy-techno"},{"name":"Breakbeat","slug":"breakbeat"},{"name":"Breakbeat Hardcore","slug":"breakbeat-hardcore"},{"name":"Breakcore","slug":"breakcore"},{"name":"Breaks","slug":"breaks"},{"name":"Broken Beat","slug":"broken-beat"},{"name":"Chicago House","slug":"chicago-house"},{"name":"Chillout","slug":"chillout"},{"name":"Chillstep","slug":"chillstep"},{"name":"Chiptune","slug":"chiptune"},{"name":"Classic House","slug":"classic-house"},{"name":"Classical","slug":"classical"},{"name":"Club House","slug":"club-house"},{"name":"Cold Wave","slug":"cold-wave"},{"name":"Country","slug":"country"},{"name":"DJ Edits / Bootlegs","slug":"dj-edits-bootlegs"},{"name":"Dance","slug":"dance"},{"name":"Dance-rock","slug":"dance-rock"},{"name":"Dancehall","slug":"dancehall"},{"name":"Dark Electro","slug":"dark-electro"},{"name":"Dark Psytrance","slug":"dark-psytrance"},{"name":"Dark Techno","slug":"dark-techno"},{"name":"Dark Wave","slug":"dark-wave"},{"name":"Darksynth","slug":"darksynth"},{"name":"Deep House","slug":"deep-house"},{"name":"Deep Tech House","slug":"deep-tech-house"},{"name":"Deep Techno","slug":"deep-techno"},{"name":"Dembow","slug":"dembow"},{"name":"Detroit Techno","slug":"detroit-techno"},{"name":"Disco","slug":"disco"},{"name":"Disco Edits","slug":"disco-edits"},{"name":"Disco House","slug":"disco-house"},{"name":"Donk","slug":"donk"},{"name":"Downtempo","slug":"downtempo"},{"name":"Dream Trance","slug":"dream-trance"},{"name":"Drill","slug":"drill"},{"name":"Drum & Bass","slug":"drum-bass"},{"name":"Drum and Bass","slug":"drum-and-bass"},{"name":"Drumfunk","slug":"drumfunk"},{"name":"Dub","slug":"dub"},{"name":"Dub Techno","slug":"dub-techno"},{"name":"Dubstep","slug":"dubstep"},{"name":"Dubtronica","slug":"dubtronica"},{"name":"Dutch House","slug":"dutch-house"},{"name":"EDM","slug":"edm"},{"name":"Early Hardcore","slug":"early-hardcore"},{"name":"Electro","slug":"electro"},{"name":"Electro Hop","slug":"electro-hop"},{"name":"Electro House","slug":"electro-house"},{"name":"Electro Swing","slug":"electro-swing"},{"name":"Electro-disco","slug":"electro-disco"},{"name":"Electro-industrial","slug":"electro-industrial"},{"name":"Electroacoustic","slug":"electroacoustic"},{"name":"Electronic","slug":"electronic"},{"name":"Electronic Body Music","slug":"electronic-body-music"},{"name":"Electronica","slug":"electronica"},{"name":"Euphoric Hardstyle","slug":"euphoric-hardstyle"},{"name":"Experimental","slug":"experimental"},{"name":"Folk","slug":"folk"},{"name":"Funk","slug":"funk"},{"name":"Funky House","slug":"funky-house"},{"name":"Future","slug":"future"},{"name":"Garage (UKG)","slug":"garage-ukg"},{"name":"Hardcore","slug":"hardcore"},{"name":"Hi-NRG","slug":"hi-nrg"},{"name":"Hip Hop","slug":"hip-hop"},{"name":"House","slug":"house"},{"name":"Indie","slug":"indie"},{"name":"Indie Dance","slug":"indie-dance"},{"name":"Industrial","slug":"industrial"},{"name":"Jazz","slug":"jazz"},{"name":"Jungle","slug":"jungle"},{"name":"Latin House","slug":"latin-house"},{"name":"Liquid Drum and Bass","slug":"liquid-drum-and-bass"},{"name":"Lounge Music","slug":"lounge-music"},{"name":"Melodic House & Techno","slug":"melodic-house-techno"},{"name":"Metal","slug":"metal"},{"name":"Minimal Techno","slug":"minimal-techno"},{"name":"Nu Jazz","slug":"nu-jazz"},{"name":"Nu-disco","slug":"nu-disco"},{"name":"Pop","slug":"pop"},{"name":"Post-dubstep","slug":"post-dubstep"},{"name":"Progressive EDM","slug":"progressive-edm"},{"name":"Progressive Electronic","slug":"progressive-electronic"},{"name":"Progressive House","slug":"progressive-house"},{"name":"Progressive Rock","slug":"progressive-rock"},{"name":"Punk","slug":"punk"},{"name":"R&B","slug":"rb"},{"name":"Rap","slug":"rap"},{"name":"Reggae","slug":"reggae"},{"name":"Reggaeton","slug":"reggaeton"},{"name":"Remixes","slug":"remixes"},{"name":"Rock","slug":"rock"},{"name":"Rock 'n' Roll","slug":"rock-n-roll"},{"name":"Rockabilly","slug":"rockabilly"},{"name":"Soul","slug":"soul"},{"name":"Soul & Funk","slug":"soul-funk"},{"name":"Soulful House","slug":"soulful-house"},{"name":"Tech House","slug":"tech-house"},{"name":"Techno","slug":"techno"},{"name":"Trance","slug":"trance"},{"name":"Tribal House","slug":"tribal-house"},{"name":"UK Hip Hop","slug":"uk-hip-hop"},{"name":"Underground","slug":"underground"},{"name":"Urban","slug":"urban"},{"name":"Vocal House","slug":"vocal-house"},{"name":"World","slug":"world"},{"name":"World Music","slug":"world-music"},{"name":"Worldbeat","slug":"worldbeat"}],"shows":[{"name":"Deep House Mixtape #80","slug":"deep-house-mixtape-80","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.48,"playCount":1503,"tags":["deep-house"],"publishDate":"2026-05-25T11:51:46.797263"},{"name":"Rock 'n' Roll Underground","slug":"rock-n-roll-underground","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.8,"playCount":3468,"tags":["rock-n-roll"],"publishDate":"2026-05-23T11:51:46.797263"},{"name":"Classical After Dark","slug":"classical-after-dark","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.64,"playCount":2580,"tags":["classical"],"publishDate":"2026-05-22T11:51:46.797263"},{"name":"The Reggae Show","slug":"the-reggae-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.58,"playCount":3411,"tags":["reggae"],"publishDate":"2026-05-22T11:51:46.797263"},{"name":"Drumfunk Selections","slug":"drumfunk-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.51,"playCount":1218,"tags":["drumfunk"],"publishDate":"2026-05-22T11:51:46.797263"},{"name":"Disco Sessions Vol. 67","slug":"disco-sessions-vol-67","owner":"deepspace","displayName":"Deepspace","qualityScore":0.36,"playCount":3731,"tags":["disco"],"publishDate":"2026-05-21T10:37:01.420103"},{"name":"Garage (UKG) Collective","slug":"garage-ukg-collective","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.56,"playCount":1186,"tags":["garage-ukg","atmospheric-drum-and-bass"],"publishDate":"2026-05-20T11:51:46.797263"},{"name":"Essential Donk Mix","slug":"essential-donk-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.8,"playCount":770,"tags":["donk"],"publishDate":"2026-05-20T11:51:46.797263"},{"name":"Late Night Hip Hop","slug":"late-night-hip-hop","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.8,"playCount":878,"tags":["hip-hop"],"publishDate":"2026-05-20T10:37:01.420103"},{"name":"Late Night Metal","slug":"late-night-metal","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.53,"playCount":3625,"tags":["metal"],"publishDate":"2026-05-17T11:51:46.797263"},{"name":"Reggaeton Selections","slug":"reggaeton-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.83,"playCount":510,"tags":["reggaeton","big-room-house"],"publishDate":"2026-05-17T11:51:46.797263"},{"name":"The Rap Show","slug":"the-rap-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.77,"playCount":3601,"tags":["rap"],"publishDate":"2026-05-16T11:51:46.797263"},{"name":"Rock Collective","slug":"rock-collective","owner":"bassculture","displayName":"Bassculture","qualityScore":0.97,"playCount":582,"tags":["rock"],"publishDate":"2026-05-13T11:51:46.797263"},{"name":"Disco Edits After Dark","slug":"disco-edits-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.89,"playCount":4615,"tags":["disco-edits"],"publishDate":"2026-05-13T11:51:46.797263"},{"name":"The Disco Edits Show","slug":"the-disco-edits-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.78,"playCount":66,"tags":["disco-edits","hi-nrg"],"publishDate":"2026-05-12T11:51:46.797263"},{"name":"Dembow Sessions Vol. 5","slug":"dembow-sessions-vol-5","owner":"deepspace","displayName":"Deepspace","qualityScore":0.78,"playCount":259,"tags":["dembow"],"publishDate":"2026-05-12T11:51:46.797263"},{"name":"Pure Disco Vibes","slug":"pure-disco-vibes","owner":"technotemple","displayName":"Technotemple","qualityScore":0.44,"playCount":328,"tags":["disco"],"publishDate":"2026-05-11T10:37:01.420103"},{"name":"Minimal Techno Selections","slug":"minimal-techno-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.66,"playCount":2876,"tags":["minimal-techno","breakbeat-hardcore"],"publishDate":"2026-05-09T11:51:46.797263"},{"name":"Liquid Drum and Bass Collective","slug":"liquid-drum-and-bass-collective","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.75,"playCount":2931,"tags":["liquid-drum-and-bass","blue-eyed-soul"],"publishDate":"2026-05-09T11:51:46.797263"},{"name":"The Hi-NRG Show","slug":"the-hi-nrg-show","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.74,"playCount":967,"tags":["hi-nrg"],"publishDate":"2026-05-08T11:51:46.797263"},{"name":"Essential Dance-rock Mix","slug":"essential-dance-rock-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.46,"playCount":3989,"tags":["dance-rock"],"publishDate":"2026-05-08T11:51:46.797263"},{"name":"Classical Collective","slug":"classical-collective","owner":"bassculture","displayName":"Bassculture","qualityScore":0.41,"playCount":4582,"tags":["classical"],"publishDate":"2026-05-08T10:37:01.420103"},{"name":"Nu-disco After Dark","slug":"nu-disco-after-dark","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.89,"playCount":3467,"tags":["nu-disco"],"publishDate":"2026-05-06T11:51:46.797263"},{"name":"Essential Hi-NRG Mix","slug":"essential-hi-nrg-mix","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.39,"playCount":1270,"tags":["hi-nrg","dance-rock"],"publishDate":"2026-05-05T11:51:46.797263"},{"name":"Pure Boogie Vibes","slug":"pure-boogie-vibes","owner":"bassculture","displayName":"Bassculture","qualityScore":0.76,"playCount":2217,"tags":["soul","boogie"],"publishDate":"2026-05-05T11:51:46.797263"},{"name":"Drum and Bass Selections","slug":"drum-and-bass-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.84,"playCount":1761,"tags":["drum-and-bass"],"publishDate":"2026-05-04T11:51:46.797263"},{"name":"Progressive Rock After Dark","slug":"progressive-rock-after-dark","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.38,"playCount":2568,"tags":["chicago-house","progressive-rock"],"publishDate":"2026-05-04T11:51:46.797263"},{"name":"Experimental Selections","slug":"experimental-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.41,"playCount":1593,"tags":["experimental"],"publishDate":"2026-05-03T11:51:46.797263"},{"name":"Dream Trance Sessions Vol. 17","slug":"dream-trance-sessions-vol-17","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.38,"playCount":4871,"tags":["dream-trance"],"publishDate":"2026-05-03T11:51:46.797263"},{"name":"Trance After Dark","slug":"trance-after-dark","owner":"deepspace","displayName":"Deepspace","qualityScore":0.71,"playCount":2593,"tags":["trance"],"publishDate":"2026-05-03T10:37:01.420103"},{"name":"Late Night House","slug":"late-night-house","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.44,"playCount":3787,"tags":["house"],"publishDate":"2026-05-01T11:51:46.797263"},{"name":"Pure Soulful House Vibes","slug":"pure-soulful-house-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.84,"playCount":4597,"tags":["soulful-house"],"publishDate":"2026-04-30T11:51:46.797263"},{"name":"Post-dubstep Selections","slug":"post-dubstep-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.86,"playCount":2077,"tags":["post-dubstep"],"publishDate":"2026-04-30T11:51:46.797263"},{"name":"Late Night Dark Electro","slug":"late-night-dark-electro","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.93,"playCount":3953,"tags":["dark-electro"],"publishDate":"2026-04-30T11:51:46.797263"},{"name":"Techno Selections","slug":"techno-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.63,"playCount":612,"tags":["techno"],"publishDate":"2026-04-29T11:51:46.797263"},{"name":"Essential Liquid Drum and Bass Mix","slug":"essential-liquid-drum-and-bass-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.91,"playCount":322,"tags":["liquid-drum-and-bass"],"publishDate":"2026-04-29T11:51:46.797263"},{"name":"Electronic Body Music Mixtape #37","slug":"electronic-body-music-mixtape-37","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.65,"playCount":3975,"tags":["electronic-body-music"],"publishDate":"2026-04-29T11:51:46.797263"},{"name":"Boogie Sessions Vol. 32","slug":"boogie-sessions-vol-32","owner":"bassculture","displayName":"Bassculture","qualityScore":0.49,"playCount":414,"tags":["boogie"],"publishDate":"2026-04-29T11:51:46.797263"},{"name":"Lounge Music Underground","slug":"lounge-music-underground","owner":"bassculture","displayName":"Bassculture","qualityScore":0.57,"playCount":4687,"tags":["pop","lounge-music"],"publishDate":"2026-04-29T11:51:46.797263"},{"name":"DJ Edits / Bootlegs Mixtape #3","slug":"dj-edits-bootlegs-mixtape-3","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.74,"playCount":2850,"tags":["dj-edits-bootlegs"],"publishDate":"2026-04-29T11:51:46.797263"},{"name":"Electro Underground","slug":"electro-underground","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.8,"playCount":3626,"tags":["electro"],"publishDate":"2026-04-28T11:51:46.797263"},{"name":"Hardcore Underground","slug":"hardcore-underground","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.81,"playCount":781,"tags":["hardcore","breakcore"],"publishDate":"2026-04-27T11:51:46.797263"},{"name":"Funk After Dark","slug":"funk-after-dark","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.77,"playCount":4137,"tags":["funk","balearic-trance"],"publishDate":"2026-04-25T11:51:46.797263"},{"name":"Drum and Bass Collective","slug":"drum-and-bass-collective","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.65,"playCount":4865,"tags":["drum-and-bass"],"publishDate":"2026-04-24T11:51:46.797263"},{"name":"Late Night Vocal House","slug":"late-night-vocal-house","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.59,"playCount":4615,"tags":["vocal-house"],"publishDate":"2026-04-24T11:51:46.797263"},{"name":"Essential Detroit Techno Mix","slug":"essential-detroit-techno-mix","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.96,"playCount":4154,"tags":["vocal-house","detroit-techno"],"publishDate":"2026-04-24T11:51:46.797263"},{"name":"Pure Ambient Drum and Bass Vibes","slug":"pure-ambient-drum-and-bass-vibes","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.71,"playCount":2551,"tags":["ambient-drum-and-bass"],"publishDate":"2026-04-24T11:51:46.797263"},{"name":"Pure World Music Vibes","slug":"pure-world-music-vibes","owner":"deepspace","displayName":"Deepspace","qualityScore":0.9,"playCount":2332,"tags":["house","world-music"],"publishDate":"2026-04-23T10:37:01.420103"},{"name":"Classical Mixtape #8","slug":"classical-mixtape-8","owner":"bassculture","displayName":"Bassculture","qualityScore":0.31,"playCount":2620,"tags":["hip-hop","classical"],"publishDate":"2026-04-22T10:37:01.420103"},{"name":"Pure Alternative Vibes","slug":"pure-alternative-vibes","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.32,"playCount":3137,"tags":["alternative"],"publishDate":"2026-04-21T11:51:46.797263"},{"name":"The Hip Hop Show","slug":"the-hip-hop-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.83,"playCount":4044,"tags":["hip-hop"],"publishDate":"2026-04-21T11:51:46.797263"},{"name":"Essential Blue-eyed Soul Mix","slug":"essential-blue-eyed-soul-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.77,"playCount":4265,"tags":["dark-electro","blue-eyed-soul"],"publishDate":"2026-04-21T11:51:46.797263"},{"name":"Hip Hop Collective","slug":"hip-hop-collective","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.49,"playCount":3474,"tags":["hip-hop","classical"],"publishDate":"2026-04-20T10:37:01.420103"},{"name":"Breakbeat Sessions Vol. 37","slug":"breakbeat-sessions-vol-37","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.56,"playCount":404,"tags":["breakbeat","indie-dance"],"publishDate":"2026-04-19T11:51:46.797263"},{"name":"The Drill Show","slug":"the-drill-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.56,"playCount":364,"tags":["jazz","drill"],"publishDate":"2026-04-17T11:51:46.797263"},{"name":"Nu Jazz Sessions Vol. 95","slug":"nu-jazz-sessions-vol-95","owner":"deepspace","displayName":"Deepspace","qualityScore":0.99,"playCount":146,"tags":["electronic","nu-jazz"],"publishDate":"2026-04-17T11:51:46.797263"},{"name":"Jungle Mixtape #60","slug":"jungle-mixtape-60","owner":"deepspace","displayName":"Deepspace","qualityScore":0.39,"playCount":4655,"tags":["jungle"],"publishDate":"2026-04-15T11:51:46.797263"},{"name":"Rock Selections","slug":"rock-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.98,"playCount":753,"tags":["rock","acid-techno"],"publishDate":"2026-04-15T11:51:46.797263"},{"name":"Dub Techno Collective","slug":"dub-techno-collective","owner":"bassculture","displayName":"Bassculture","qualityScore":0.7,"playCount":4462,"tags":["soul","dub-techno"],"publishDate":"2026-04-14T11:51:46.797263"},{"name":"Tribal House Collective","slug":"tribal-house-collective","owner":"bassculture","displayName":"Bassculture","qualityScore":0.74,"playCount":2471,"tags":["tribal-house"],"publishDate":"2026-04-13T11:51:46.797263"},{"name":"Lounge Music Collective","slug":"lounge-music-collective","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.79,"playCount":223,"tags":["electroacoustic","lounge-music"],"publishDate":"2026-04-13T11:51:46.797263"},{"name":"Ambient Techno Sessions Vol. 10","slug":"ambient-techno-sessions-vol-10","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.65,"playCount":4176,"tags":["ambient-techno"],"publishDate":"2026-04-12T11:51:46.797263"},{"name":"Euphoric Hardstyle Underground","slug":"euphoric-hardstyle-underground","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.38,"playCount":4708,"tags":["euphoric-hardstyle"],"publishDate":"2026-04-11T11:51:46.797263"},{"name":"Essential Ambient Mix","slug":"essential-ambient-mix","owner":"bassculture","displayName":"Bassculture","qualityScore":0.74,"playCount":4301,"tags":["ambient"],"publishDate":"2026-04-11T10:37:01.420103"},{"name":"Hip Hop Sessions Vol. 3","slug":"hip-hop-sessions-vol-3","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.58,"playCount":2464,"tags":["hip-hop"],"publishDate":"2026-04-10T10:37:01.420103"},{"name":"Essential Ambient Techno Mix","slug":"essential-ambient-techno-mix","owner":"technotemple","displayName":"Technotemple","qualityScore":0.3,"playCount":4563,"tags":["ambient-techno","dark-electro"],"publishDate":"2026-04-09T11:51:46.797263"},{"name":"Late Night Electroacoustic","slug":"late-night-electroacoustic","owner":"deepspace","displayName":"Deepspace","qualityScore":0.98,"playCount":1913,"tags":["techno","electroacoustic"],"publishDate":"2026-04-09T11:51:46.797263"},{"name":"Pure Big Room House Vibes","slug":"pure-big-room-house-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.66,"playCount":3067,"tags":["big-room-house"],"publishDate":"2026-04-08T11:51:46.797263"},{"name":"Chillstep Selections","slug":"chillstep-selections","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.64,"playCount":2604,"tags":["chillstep"],"publishDate":"2026-04-08T11:51:46.797263"},{"name":"Pure Afro House Vibes","slug":"pure-afro-house-vibes","owner":"technotemple","displayName":"Technotemple","qualityScore":0.36,"playCount":3837,"tags":["afro-house"],"publishDate":"2026-04-07T11:51:46.797263"},{"name":"Darksynth Collective","slug":"darksynth-collective","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.51,"playCount":2781,"tags":["darksynth"],"publishDate":"2026-04-07T11:51:46.797263"},{"name":"Late Night Techno","slug":"late-night-techno","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.65,"playCount":4808,"tags":["techno"],"publishDate":"2026-04-06T10:37:01.420103"},{"name":"Essential Disco Mix","slug":"essential-disco-mix","owner":"technotemple","displayName":"Technotemple","qualityScore":0.41,"playCount":1690,"tags":["disco"],"publishDate":"2026-04-05T11:51:46.797263"},{"name":"Trance After Dark","slug":"trance-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.99,"playCount":1702,"tags":["trance"],"publishDate":"2026-04-05T11:51:46.797263"},{"name":"Latin House Selections","slug":"latin-house-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.86,"playCount":1124,"tags":["latin-house","dark-electro"],"publishDate":"2026-04-05T11:51:46.797263"},{"name":"Euphoric Hardstyle Sessions Vol. 24","slug":"euphoric-hardstyle-sessions-vol-24","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.76,"playCount":4191,"tags":["euphoric-hardstyle"],"publishDate":"2026-04-05T11:51:46.797263"},{"name":"Chillstep After Dark","slug":"chillstep-after-dark","owner":"technotemple","displayName":"Technotemple","qualityScore":0.33,"playCount":2700,"tags":["acid-techno","chillstep"],"publishDate":"2026-04-05T11:51:46.797263"},{"name":"Hip Hop Underground","slug":"hip-hop-underground","owner":"technotemple","displayName":"Technotemple","qualityScore":0.76,"playCount":483,"tags":["hip-hop"],"publishDate":"2026-04-03T11:51:46.797263"},{"name":"Essential Disco House Mix","slug":"essential-disco-house-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.71,"playCount":4118,"tags":["disco-house","chiptune"],"publishDate":"2026-04-03T11:51:46.797263"},{"name":"Pure Tribal House Vibes","slug":"pure-tribal-house-vibes","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.67,"playCount":1017,"tags":["pop","tribal-house"],"publishDate":"2026-04-03T11:51:46.797263"},{"name":"Reggae After Dark","slug":"reggae-after-dark","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.71,"playCount":4809,"tags":["house","reggae"],"publishDate":"2026-04-03T10:37:01.420103"},{"name":"The Dub Show","slug":"the-dub-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.58,"playCount":4120,"tags":["dub","electro-industrial"],"publishDate":"2026-03-30T11:51:46.797263"},{"name":"Late Night Progressive EDM","slug":"late-night-progressive-edm","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.97,"playCount":4337,"tags":["progressive-edm"],"publishDate":"2026-03-30T11:51:46.797263"},{"name":"The Drum & Bass Show","slug":"the-drum-bass-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.88,"playCount":889,"tags":["house","drum-bass"],"publishDate":"2026-03-30T10:37:01.420103"},{"name":"Essential Dubtronica Mix","slug":"essential-dubtronica-mix","owner":"deepspace","displayName":"Deepspace","qualityScore":0.54,"playCount":1521,"tags":["dubtronica","dark-electro"],"publishDate":"2026-03-29T11:51:46.797263"},{"name":"Pure Techno Vibes","slug":"pure-techno-vibes","owner":"technotemple","displayName":"Technotemple","qualityScore":0.76,"playCount":4727,"tags":["techno","house"],"publishDate":"2026-03-27T10:37:01.420103"},{"name":"Balearic Mixtape #62","slug":"balearic-mixtape-62","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.43,"playCount":3878,"tags":["balearic"],"publishDate":"2026-03-26T11:51:46.797263"},{"name":"Dark Wave Underground","slug":"dark-wave-underground","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.45,"playCount":432,"tags":["ambient-drum-and-bass","dark-wave"],"publishDate":"2026-03-25T11:51:46.797263"},{"name":"House After Dark","slug":"house-after-dark","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.65,"playCount":2060,"tags":["house","hip-hop"],"publishDate":"2026-03-25T10:37:01.420103"},{"name":"Folk After Dark","slug":"folk-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.93,"playCount":518,"tags":["folk"],"publishDate":"2026-03-23T11:51:46.797263"},{"name":"Chicago House Underground","slug":"chicago-house-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.52,"playCount":1347,"tags":["chicago-house","progressive-edm"],"publishDate":"2026-03-21T11:51:46.797263"},{"name":"Breakbeat Hardcore Sessions Vol. 6","slug":"breakbeat-hardcore-sessions-vol-6","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.46,"playCount":2345,"tags":["breakbeat-hardcore"],"publishDate":"2026-03-21T11:51:46.797263"},{"name":"Chiptune Mixtape #91","slug":"chiptune-mixtape-91","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.6,"playCount":3286,"tags":["chiptune"],"publishDate":"2026-03-21T11:51:46.797263"},{"name":"Breaks Sessions Vol. 98","slug":"breaks-sessions-vol-98","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.34,"playCount":959,"tags":["breaks"],"publishDate":"2026-03-20T11:51:46.797263"},{"name":"Ambient Selections","slug":"ambient-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.55,"playCount":2953,"tags":["ambient","dance"],"publishDate":"2026-03-19T11:51:46.797263"},{"name":"Country Selections","slug":"country-selections","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.34,"playCount":459,"tags":["country"],"publishDate":"2026-03-19T11:51:46.797263"},{"name":"Essential Electronic Body Music Mix","slug":"essential-electronic-body-music-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.57,"playCount":852,"tags":["electronic-body-music"],"publishDate":"2026-03-19T11:51:46.797263"},{"name":"Late Night Bassline","slug":"late-night-bassline","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.94,"playCount":1710,"tags":["bassline","donk"],"publishDate":"2026-03-18T11:51:46.797263"},{"name":"Pure Dancehall Vibes","slug":"pure-dancehall-vibes","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.35,"playCount":370,"tags":["dancehall"],"publishDate":"2026-03-17T11:51:46.797263"},{"name":"Classical After Dark","slug":"classical-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.98,"playCount":2490,"tags":["hip-hop","classical"],"publishDate":"2026-03-17T10:37:01.420103"},{"name":"Essential Metal Mix","slug":"essential-metal-mix","owner":"technotemple","displayName":"Technotemple","qualityScore":0.98,"playCount":2942,"tags":["metal"],"publishDate":"2026-03-16T11:51:46.797263"},{"name":"Atmospheric Drum and Bass After Dark","slug":"atmospheric-drum-and-bass-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.38,"playCount":3793,"tags":["atmospheric-drum-and-bass"],"publishDate":"2026-03-16T11:51:46.797263"},{"name":"Jazz Selections","slug":"jazz-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.88,"playCount":2055,"tags":["jazz","classical"],"publishDate":"2026-03-15T10:37:01.420103"},{"name":"Essential Industrial Mix","slug":"essential-industrial-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.5,"playCount":4145,"tags":["industrial"],"publishDate":"2026-03-14T11:51:46.797263"},{"name":"Pure Techno Vibes","slug":"pure-techno-vibes","owner":"deepspace","displayName":"Deepspace","qualityScore":0.87,"playCount":1273,"tags":["techno","breaks"],"publishDate":"2026-03-13T11:51:46.797263"},{"name":"Breakbeat Hardcore Selections","slug":"breakbeat-hardcore-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.32,"playCount":4433,"tags":["metal","breakbeat-hardcore"],"publishDate":"2026-03-13T11:51:46.797263"},{"name":"Dub Underground","slug":"dub-underground","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.5,"playCount":1908,"tags":["dub"],"publishDate":"2026-03-11T11:51:46.797263"},{"name":"Early Hardcore Collective","slug":"early-hardcore-collective","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.47,"playCount":913,"tags":["early-hardcore"],"publishDate":"2026-03-11T11:51:46.797263"},{"name":"Essential Trance Mix","slug":"essential-trance-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.66,"playCount":3173,"tags":["house","trance"],"publishDate":"2026-03-10T10:37:01.420103"},{"name":"Electro House Sessions Vol. 27","slug":"electro-house-sessions-vol-27","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.7,"playCount":3884,"tags":["electro-house"],"publishDate":"2026-03-09T11:51:46.797263"},{"name":"The Indie Show","slug":"the-indie-show","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.79,"playCount":4622,"tags":["funk","indie"],"publishDate":"2026-03-09T11:51:46.797263"},{"name":"The Bouncy Techno Show","slug":"the-bouncy-techno-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.32,"playCount":1315,"tags":["bouncy-techno"],"publishDate":"2026-03-07T11:51:46.797263"},{"name":"Soul & Funk Selections","slug":"soul-funk-selections","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.91,"playCount":3827,"tags":["drum-bass","soul-funk"],"publishDate":"2026-03-07T10:37:01.420103"},{"name":"Ambient After Dark","slug":"ambient-after-dark","owner":"deepspace","displayName":"Deepspace","qualityScore":0.76,"playCount":385,"tags":["ambient"],"publishDate":"2026-03-06T11:51:46.797263"},{"name":"Soulful House After Dark","slug":"soulful-house-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.38,"playCount":4923,"tags":["soulful-house"],"publishDate":"2026-03-06T11:51:46.797263"},{"name":"Late Night Dream Trance","slug":"late-night-dream-trance","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.45,"playCount":3707,"tags":["rock","dream-trance"],"publishDate":"2026-03-06T11:51:46.797263"},{"name":"Acid House Selections","slug":"acid-house-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.32,"playCount":3510,"tags":["afrobeats","acid-house"],"publishDate":"2026-03-05T11:51:46.797263"},{"name":"Liquid Drum and Bass Selections","slug":"liquid-drum-and-bass-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.45,"playCount":785,"tags":["liquid-drum-and-bass"],"publishDate":"2026-03-05T11:51:46.797263"},{"name":"Late Night Breakbeat Hardcore","slug":"late-night-breakbeat-hardcore","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.88,"playCount":188,"tags":["breakbeat-hardcore"],"publishDate":"2026-03-05T11:51:46.797263"},{"name":"Pop Selections","slug":"pop-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.58,"playCount":4200,"tags":["pop","funky-house"],"publishDate":"2026-03-04T11:51:46.797263"},{"name":"Cold Wave Selections","slug":"cold-wave-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.91,"playCount":3047,"tags":["cold-wave"],"publishDate":"2026-03-04T11:51:46.797263"},{"name":"The Electronic Show","slug":"the-electronic-show","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.44,"playCount":314,"tags":["electronic"],"publishDate":"2026-03-03T11:51:46.797263"},{"name":"Afro House Underground","slug":"afro-house-underground","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.67,"playCount":1021,"tags":["afro-house","cold-wave"],"publishDate":"2026-03-02T11:51:46.797263"},{"name":"Nu-disco Sessions Vol. 13","slug":"nu-disco-sessions-vol-13","owner":"technotemple","displayName":"Technotemple","qualityScore":0.78,"playCount":2254,"tags":["bass-club-music","nu-disco"],"publishDate":"2026-03-02T11:51:46.797263"},{"name":"Electro Hop Selections","slug":"electro-hop-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.94,"playCount":3245,"tags":["electro-hop","uk-hip-hop"],"publishDate":"2026-03-02T11:51:46.797263"},{"name":"Pure Progressive Electronic Vibes","slug":"pure-progressive-electronic-vibes","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.54,"playCount":1420,"tags":["progressive-electronic"],"publishDate":"2026-03-02T11:51:46.797263"},{"name":"Tech House Selections","slug":"tech-house-selections","owner":"technotemple","displayName":"Technotemple","qualityScore":0.53,"playCount":679,"tags":["tech-house"],"publishDate":"2026-02-27T11:51:46.797263"},{"name":"Essential Funky House Mix","slug":"essential-funky-house-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.59,"playCount":605,"tags":["funky-house","latin-house"],"publishDate":"2026-02-26T11:51:46.797263"},{"name":"Balearic Trance Sessions Vol. 26","slug":"balearic-trance-sessions-vol-26","owner":"bassculture","displayName":"Bassculture","qualityScore":0.76,"playCount":2058,"tags":["balearic-trance"],"publishDate":"2026-02-26T11:51:46.797263"},{"name":"Future Selections","slug":"future-selections","owner":"technotemple","displayName":"Technotemple","qualityScore":0.76,"playCount":377,"tags":["dark-electro","future"],"publishDate":"2026-02-26T11:51:46.797263"},{"name":"Pure Remixes Vibes","slug":"pure-remixes-vibes","owner":"technotemple","displayName":"Technotemple","qualityScore":0.93,"playCount":4545,"tags":["balearic-trance","remixes"],"publishDate":"2026-02-26T11:51:46.797263"},{"name":"Trance Underground","slug":"trance-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.41,"playCount":3661,"tags":["trance"],"publishDate":"2026-02-26T10:37:01.420103"},{"name":"Dancehall After Dark","slug":"dancehall-after-dark","owner":"deepspace","displayName":"Deepspace","qualityScore":0.92,"playCount":4208,"tags":["dancehall"],"publishDate":"2026-02-25T11:51:46.797263"},{"name":"Essential Worldbeat Mix","slug":"essential-worldbeat-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.67,"playCount":1432,"tags":["post-dubstep","worldbeat"],"publishDate":"2026-02-25T11:51:46.797263"},{"name":"EDM Mixtape #36","slug":"edm-mixtape-36","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.63,"playCount":3960,"tags":["edm"],"publishDate":"2026-02-23T11:51:46.797263"},{"name":"Late Night Darksynth","slug":"late-night-darksynth","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.36,"playCount":3641,"tags":["darksynth"],"publishDate":"2026-02-23T11:51:46.797263"},{"name":"Rock 'n' Roll Mixtape #78","slug":"rock-n-roll-mixtape-78","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.34,"playCount":4400,"tags":["rock-n-roll"],"publishDate":"2026-02-23T11:51:46.797263"},{"name":"Essential Drum & Bass Mix","slug":"essential-drum-bass-mix","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.7,"playCount":3973,"tags":["drum-bass"],"publishDate":"2026-02-22T10:37:01.420103"},{"name":"Classical Selections","slug":"classical-selections","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.83,"playCount":4407,"tags":["soul-funk","classical"],"publishDate":"2026-02-21T10:37:01.420103"},{"name":"Indie Dance Mixtape #16","slug":"indie-dance-mixtape-16","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.89,"playCount":1482,"tags":["bassline","indie-dance"],"publishDate":"2026-02-20T11:51:46.797263"},{"name":"Chillout After Dark","slug":"chillout-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.5,"playCount":1178,"tags":["chillout"],"publishDate":"2026-02-19T11:51:46.797263"},{"name":"The Dub Techno Show","slug":"the-dub-techno-show","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.56,"playCount":175,"tags":["dub-techno"],"publishDate":"2026-02-19T11:51:46.797263"},{"name":"Hi-NRG Collective","slug":"hi-nrg-collective","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.52,"playCount":4714,"tags":["atmospheric-drum-and-bass","hi-nrg"],"publishDate":"2026-02-19T11:51:46.797263"},{"name":"The Electroacoustic Show","slug":"the-electroacoustic-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.54,"playCount":4182,"tags":["electroacoustic","rock-n-roll"],"publishDate":"2026-02-19T11:51:46.797263"},{"name":"The Electronica Show","slug":"the-electronica-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.67,"playCount":2423,"tags":["electronica"],"publishDate":"2026-02-19T10:37:01.420103"},{"name":"Jungle Sessions Vol. 34","slug":"jungle-sessions-vol-34","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.68,"playCount":1051,"tags":["jungle"],"publishDate":"2026-02-18T11:51:46.797263"},{"name":"Detroit Techno After Dark","slug":"detroit-techno-after-dark","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.97,"playCount":2515,"tags":["detroit-techno"],"publishDate":"2026-02-18T11:51:46.797263"},{"name":"Essential Dark Psytrance Mix","slug":"essential-dark-psytrance-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.78,"playCount":4885,"tags":["dark-psytrance","electro-swing"],"publishDate":"2026-02-18T11:51:46.797263"},{"name":"The Drum and Bass Show","slug":"the-drum-and-bass-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.36,"playCount":4767,"tags":["drum-and-bass"],"publishDate":"2026-02-17T11:51:46.797263"},{"name":"Melodic House & Techno Mixtape #64","slug":"melodic-house-techno-mixtape-64","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.85,"playCount":1050,"tags":["melodic-house-techno"],"publishDate":"2026-02-17T11:51:46.797263"},{"name":"Electronica Underground","slug":"electronica-underground","owner":"deepspace","displayName":"Deepspace","qualityScore":0.41,"playCount":1747,"tags":["electronica"],"publishDate":"2026-02-17T10:37:01.420103"},{"name":"Pure Pop Vibes","slug":"pure-pop-vibes","owner":"technotemple","displayName":"Technotemple","qualityScore":0.94,"playCount":3493,"tags":["pop","progressive-rock"],"publishDate":"2026-02-16T11:51:46.797263"},{"name":"Disco Edits Sessions Vol. 17","slug":"disco-edits-sessions-vol-17","owner":"deepspace","displayName":"Deepspace","qualityScore":0.47,"playCount":4826,"tags":["disco-edits"],"publishDate":"2026-02-16T11:51:46.797263"},{"name":"Classical Selections","slug":"classical-selections","owner":"technotemple","displayName":"Technotemple","qualityScore":0.6,"playCount":2478,"tags":["classical"],"publishDate":"2026-02-15T11:51:46.797263"},{"name":"Breakcore Mixtape #39","slug":"breakcore-mixtape-39","owner":"technotemple","displayName":"Technotemple","qualityScore":0.64,"playCount":4338,"tags":["breakcore"],"publishDate":"2026-02-14T11:51:46.797263"},{"name":"Pure DJ Edits / Bootlegs Vibes","slug":"pure-dj-edits-bootlegs-vibes","owner":"technotemple","displayName":"Technotemple","qualityScore":0.67,"playCount":799,"tags":["dj-edits-bootlegs"],"publishDate":"2026-02-14T11:51:46.797263"},{"name":"Rockabilly Collective","slug":"rockabilly-collective","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.89,"playCount":824,"tags":["rockabilly"],"publishDate":"2026-02-14T11:51:46.797263"},{"name":"Essential Worldbeat Mix","slug":"essential-worldbeat-mix","owner":"deepspace","displayName":"Deepspace","qualityScore":0.39,"playCount":3828,"tags":["worldbeat"],"publishDate":"2026-02-14T11:51:46.797263"},{"name":"Deep House Selections","slug":"deep-house-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.49,"playCount":736,"tags":["deep-house","hip-hop"],"publishDate":"2026-02-14T10:37:01.420103"},{"name":"The Techno Show","slug":"the-techno-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.84,"playCount":908,"tags":["techno"],"publishDate":"2026-02-13T11:51:46.797263"},{"name":"Essential Broken Beat Mix","slug":"essential-broken-beat-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.71,"playCount":866,"tags":["broken-beat"],"publishDate":"2026-02-13T11:51:46.797263"},{"name":"Pure World Vibes","slug":"pure-world-vibes","owner":"bassculture","displayName":"Bassculture","qualityScore":0.48,"playCount":2302,"tags":["world"],"publishDate":"2026-02-13T11:51:46.797263"},{"name":"Soul & Funk Collective","slug":"soul-funk-collective","owner":"deepspace","displayName":"Deepspace","qualityScore":0.66,"playCount":3554,"tags":["soul-funk"],"publishDate":"2026-02-11T10:37:01.420103"},{"name":"Experimental Sessions Vol. 6","slug":"experimental-sessions-vol-6","owner":"deepspace","displayName":"Deepspace","qualityScore":0.32,"playCount":3154,"tags":["experimental","underground"],"publishDate":"2026-02-09T11:51:46.797263"},{"name":"Late Night Electronic Body Music","slug":"late-night-electronic-body-music","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.68,"playCount":2804,"tags":["electronic-body-music"],"publishDate":"2026-02-09T11:51:46.797263"},{"name":"The Deep House Show","slug":"the-deep-house-show","owner":"bassculture","displayName":"Bassculture","qualityScore":0.47,"playCount":3287,"tags":["deep-house"],"publishDate":"2026-02-09T10:37:01.420103"},{"name":"Hip Hop Selections","slug":"hip-hop-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.82,"playCount":2606,"tags":["hip-hop"],"publishDate":"2026-02-09T10:37:01.420103"},{"name":"Late Night EDM","slug":"late-night-edm","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.47,"playCount":1165,"tags":["edm"],"publishDate":"2026-02-07T11:51:46.797263"},{"name":"Essential Progressive Electronic Mix","slug":"essential-progressive-electronic-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.75,"playCount":1571,"tags":["progressive-electronic"],"publishDate":"2026-02-07T11:51:46.797263"},{"name":"The Disco Show","slug":"the-disco-show","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.61,"playCount":4203,"tags":["disco"],"publishDate":"2026-02-07T10:37:01.420103"},{"name":"The DJ Edits / Bootlegs Show","slug":"the-dj-edits-bootlegs-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.56,"playCount":4188,"tags":["dj-edits-bootlegs"],"publishDate":"2026-02-06T11:51:46.797263"},{"name":"Afrobeats Sessions Vol. 13","slug":"afrobeats-sessions-vol-13","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.99,"playCount":1747,"tags":["afrobeats"],"publishDate":"2026-02-05T11:51:46.797263"},{"name":"Garage (UKG) Underground","slug":"garage-ukg-underground","owner":"bassculture","displayName":"Bassculture","qualityScore":0.65,"playCount":1738,"tags":["garage-ukg","big-beat"],"publishDate":"2026-02-05T11:51:46.797263"},{"name":"Late Night Dembow","slug":"late-night-dembow","owner":"bassculture","displayName":"Bassculture","qualityScore":0.69,"playCount":3666,"tags":["dembow","lounge-music"],"publishDate":"2026-02-05T11:51:46.797263"},{"name":"Late Night Breakbeat","slug":"late-night-breakbeat","owner":"bassculture","displayName":"Bassculture","qualityScore":0.63,"playCount":2457,"tags":["breakbeat"],"publishDate":"2026-02-02T11:51:46.797263"},{"name":"UK Hip Hop Sessions Vol. 50","slug":"uk-hip-hop-sessions-vol-50","owner":"bassculture","displayName":"Bassculture","qualityScore":0.86,"playCount":3790,"tags":["uk-hip-hop"],"publishDate":"2026-02-02T11:51:46.797263"},{"name":"The Deep House Show","slug":"the-deep-house-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.47,"playCount":1181,"tags":["deep-house"],"publishDate":"2026-02-02T10:37:01.420103"},{"name":"Essential Soul & Funk Mix","slug":"essential-soul-funk-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.94,"playCount":3154,"tags":["soul-funk"],"publishDate":"2026-02-02T10:37:01.420103"},{"name":"Essential Electro Mix","slug":"essential-electro-mix","owner":"bassculture","displayName":"Bassculture","qualityScore":0.98,"playCount":818,"tags":["electro"],"publishDate":"2026-02-01T11:51:46.797263"},{"name":"Alternative Underground","slug":"alternative-underground","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.41,"playCount":4105,"tags":["alternative"],"publishDate":"2026-01-31T11:51:46.797263"},{"name":"Essential Disco Mix","slug":"essential-disco-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.36,"playCount":4212,"tags":["disco","hardcore"],"publishDate":"2026-01-31T11:51:46.797263"},{"name":"Latin House Mixtape #58","slug":"latin-house-mixtape-58","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.72,"playCount":2176,"tags":["latin-house"],"publishDate":"2026-01-31T11:51:46.797263"},{"name":"Bassline Selections","slug":"bassline-selections","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.46,"playCount":1524,"tags":["bassline"],"publishDate":"2026-01-31T11:51:46.797263"},{"name":"Drumfunk After Dark","slug":"drumfunk-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.59,"playCount":2438,"tags":["drumfunk"],"publishDate":"2026-01-29T11:51:46.797263"},{"name":"Pure Club House Vibes","slug":"pure-club-house-vibes","owner":"deepspace","displayName":"Deepspace","qualityScore":0.86,"playCount":3341,"tags":["club-house","darksynth"],"publishDate":"2026-01-28T11:51:46.797263"},{"name":"The Melodic House & Techno Show","slug":"the-melodic-house-techno-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.54,"playCount":1807,"tags":["melodic-house-techno"],"publishDate":"2026-01-28T11:51:46.797263"},{"name":"Urban Selections","slug":"urban-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.4,"playCount":4409,"tags":["afro-house","urban"],"publishDate":"2026-01-28T11:51:46.797263"},{"name":"Dubtronica Mixtape #68","slug":"dubtronica-mixtape-68","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.47,"playCount":2955,"tags":["dubtronica"],"publishDate":"2026-01-27T11:51:46.797263"},{"name":"Late Night Country","slug":"late-night-country","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.69,"playCount":1587,"tags":["country"],"publishDate":"2026-01-26T11:51:46.797263"},{"name":"Pure Drum & Bass Vibes","slug":"pure-drum-bass-vibes","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.8,"playCount":4177,"tags":["house","drum-bass"],"publishDate":"2026-01-26T10:37:01.420103"},{"name":"Pure Melodic House & Techno Vibes","slug":"pure-melodic-house-techno-vibes","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.5,"playCount":2601,"tags":["melodic-house-techno"],"publishDate":"2026-01-25T11:51:46.797263"},{"name":"Rock Underground","slug":"rock-underground","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.45,"playCount":4792,"tags":["rock"],"publishDate":"2026-01-24T11:51:46.797263"},{"name":"Reggae Selections","slug":"reggae-selections","owner":"technotemple","displayName":"Technotemple","qualityScore":0.66,"playCount":3058,"tags":["reggae"],"publishDate":"2026-01-23T10:37:01.420103"},{"name":"Essential Dubstep Mix","slug":"essential-dubstep-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.97,"playCount":3554,"tags":["country","dubstep"],"publishDate":"2026-01-22T11:51:46.797263"},{"name":"Boogie After Dark","slug":"boogie-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.61,"playCount":4726,"tags":["boogie"],"publishDate":"2026-01-20T11:51:46.797263"},{"name":"Urban Selections","slug":"urban-selections","owner":"deepspace","displayName":"Deepspace","qualityScore":0.88,"playCount":4434,"tags":["urban"],"publishDate":"2026-01-19T11:51:46.797263"},{"name":"Hardcore Underground","slug":"hardcore-underground","owner":"technotemple","displayName":"Technotemple","qualityScore":0.3,"playCount":2499,"tags":["hardcore"],"publishDate":"2026-01-18T11:51:46.797263"},{"name":"The Bassline Show","slug":"the-bassline-show","owner":"bassculture","displayName":"Bassculture","qualityScore":0.51,"playCount":1746,"tags":["bassline"],"publishDate":"2026-01-17T11:51:46.797263"},{"name":"Drumfunk Sessions Vol. 56","slug":"drumfunk-sessions-vol-56","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.67,"playCount":4022,"tags":["drumfunk","dark-wave"],"publishDate":"2026-01-16T11:51:46.797263"},{"name":"Deep Techno Selections","slug":"deep-techno-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.98,"playCount":2690,"tags":["deep-techno"],"publishDate":"2026-01-15T11:51:46.797263"},{"name":"World Music After Dark","slug":"world-music-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.37,"playCount":3676,"tags":["disco","world-music"],"publishDate":"2026-01-15T10:37:01.420103"},{"name":"Electro Hop After Dark","slug":"electro-hop-after-dark","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.38,"playCount":4040,"tags":["electro-hop"],"publishDate":"2026-01-14T11:51:46.797263"},{"name":"World Music Underground","slug":"world-music-underground","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.71,"playCount":2678,"tags":["world-music","classical"],"publishDate":"2026-01-14T10:37:01.420103"},{"name":"Classical After Dark","slug":"classical-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.72,"playCount":2629,"tags":["classical"],"publishDate":"2026-01-14T10:37:01.420103"},{"name":"Essential Bass & Club Music Mix","slug":"essential-bass-club-music-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.4,"playCount":4217,"tags":["bass-club-music","underground"],"publishDate":"2026-01-12T11:51:46.797263"},{"name":"Disco Underground","slug":"disco-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.46,"playCount":208,"tags":["disco"],"publishDate":"2026-01-12T11:51:46.797263"},{"name":"The Pop Show","slug":"the-pop-show","owner":"technotemple","displayName":"Technotemple","qualityScore":0.41,"playCount":3705,"tags":["pop","world"],"publishDate":"2026-01-12T11:51:46.797263"},{"name":"The Progressive House Show","slug":"the-progressive-house-show","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.92,"playCount":492,"tags":["progressive-house"],"publishDate":"2026-01-10T11:51:46.797263"},{"name":"The Drill Show","slug":"the-drill-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.43,"playCount":3008,"tags":["drill"],"publishDate":"2026-01-09T11:51:46.797263"},{"name":"Late Night Underground","slug":"late-night-underground","owner":"deepspace","displayName":"Deepspace","qualityScore":0.78,"playCount":3680,"tags":["underground"],"publishDate":"2026-01-09T11:51:46.797263"},{"name":"Pure Electro House Vibes","slug":"pure-electro-house-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.81,"playCount":1108,"tags":["electro-house"],"publishDate":"2026-01-08T11:51:46.797263"},{"name":"Broken Beat Underground","slug":"broken-beat-underground","owner":"bassculture","displayName":"Bassculture","qualityScore":0.41,"playCount":2955,"tags":["broken-beat"],"publishDate":"2026-01-08T11:51:46.797263"},{"name":"Late Night Afrobeat","slug":"late-night-afrobeat","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.31,"playCount":2473,"tags":["afrobeat"],"publishDate":"2026-01-08T11:51:46.797263"},{"name":"Pure Post-dubstep Vibes","slug":"pure-post-dubstep-vibes","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.89,"playCount":1225,"tags":["post-dubstep","electro-swing"],"publishDate":"2026-01-07T11:51:46.797263"},{"name":"The Soul Show","slug":"the-soul-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.52,"playCount":955,"tags":["electronic","soul"],"publishDate":"2026-01-06T11:51:46.797263"},{"name":"Balearic Sessions Vol. 64","slug":"balearic-sessions-vol-64","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.64,"playCount":3418,"tags":["balearic"],"publishDate":"2026-01-06T11:51:46.797263"},{"name":"Deep Tech House Collective","slug":"deep-tech-house-collective","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.7,"playCount":4489,"tags":["deep-tech-house"],"publishDate":"2026-01-06T11:51:46.797263"},{"name":"Dubstep Underground","slug":"dubstep-underground","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.32,"playCount":2018,"tags":["dance","dubstep"],"publishDate":"2026-01-05T11:51:46.797263"},{"name":"Funky House Underground","slug":"funky-house-underground","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.96,"playCount":1096,"tags":["funky-house"],"publishDate":"2026-01-05T11:51:46.797263"},{"name":"Trance Selections","slug":"trance-selections","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.99,"playCount":4451,"tags":["trance"],"publishDate":"2026-01-05T10:37:01.420103"},{"name":"Jazz Collective","slug":"jazz-collective","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.81,"playCount":637,"tags":["jazz"],"publishDate":"2026-01-05T10:37:01.420103"},{"name":"The Alternative Show","slug":"the-alternative-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.52,"playCount":4783,"tags":["alternative","remixes"],"publishDate":"2026-01-04T11:51:46.797263"},{"name":"Late Night Big Beat","slug":"late-night-big-beat","owner":"bassculture","displayName":"Bassculture","qualityScore":0.63,"playCount":2727,"tags":["chicago-house","big-beat"],"publishDate":"2026-01-04T11:51:46.797263"},{"name":"Techno Collective","slug":"techno-collective","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.98,"playCount":2967,"tags":["techno"],"publishDate":"2026-01-04T10:37:01.420103"},{"name":"Punk Collective","slug":"punk-collective","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.93,"playCount":671,"tags":["punk"],"publishDate":"2026-01-03T11:51:46.797263"},{"name":"The Big Room House Show","slug":"the-big-room-house-show","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.61,"playCount":2815,"tags":["big-room-house"],"publishDate":"2026-01-03T11:51:46.797263"},{"name":"Chillout Collective","slug":"chillout-collective","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.7,"playCount":1733,"tags":["chillout"],"publishDate":"2026-01-02T11:51:46.797263"},{"name":"Essential Dutch House Mix","slug":"essential-dutch-house-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.94,"playCount":4984,"tags":["electronica","dutch-house"],"publishDate":"2026-01-02T11:51:46.797263"},{"name":"Late Night Vocal House","slug":"late-night-vocal-house","owner":"technotemple","displayName":"Technotemple","qualityScore":0.44,"playCount":2501,"tags":["chicago-house","vocal-house"],"publishDate":"2026-01-02T11:51:46.797263"},{"name":"Dark Electro After Dark","slug":"dark-electro-after-dark","owner":"deepspace","displayName":"Deepspace","qualityScore":0.5,"playCount":4766,"tags":["dark-electro"],"publishDate":"2026-01-02T11:51:46.797263"},{"name":"Essential Dembow Mix","slug":"essential-dembow-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.35,"playCount":282,"tags":["dembow"],"publishDate":"2026-01-02T11:51:46.797263"},{"name":"Electro Swing Mixtape #23","slug":"electro-swing-mixtape-23","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.5,"playCount":4031,"tags":["electro-swing"],"publishDate":"2025-12-29T11:51:46.797263"},{"name":"Atmospheric Drum and Bass Underground","slug":"atmospheric-drum-and-bass-underground","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.61,"playCount":3135,"tags":["atmospheric-drum-and-bass"],"publishDate":"2025-12-28T11:51:46.797263"},{"name":"Breakcore Collective","slug":"breakcore-collective","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.93,"playCount":702,"tags":["breakcore"],"publishDate":"2025-12-28T11:51:46.797263"},{"name":"Garage (UKG) Sessions Vol. 17","slug":"garage-ukg-sessions-vol-17","owner":"deepspace","displayName":"Deepspace","qualityScore":0.56,"playCount":3162,"tags":["garage-ukg","progressive-electronic"],"publishDate":"2025-12-27T11:51:46.797263"},{"name":"Essential Deep Tech House Mix","slug":"essential-deep-tech-house-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.77,"playCount":3414,"tags":["deep-tech-house","drill"],"publishDate":"2025-12-26T11:51:46.797263"},{"name":"Late Night Balearic","slug":"late-night-balearic","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.7,"playCount":1759,"tags":["jazz","balearic"],"publishDate":"2025-12-25T11:51:46.797263"},{"name":"Late Night Hardcore","slug":"late-night-hardcore","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.43,"playCount":3680,"tags":["hardcore"],"publishDate":"2025-12-24T11:51:46.797263"},{"name":"The Dancehall Show","slug":"the-dancehall-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.39,"playCount":3129,"tags":["dancehall"],"publishDate":"2025-12-21T11:51:46.797263"},{"name":"Dark Psytrance Collective","slug":"dark-psytrance-collective","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.75,"playCount":2605,"tags":["dark-psytrance"],"publishDate":"2025-12-21T11:51:46.797263"},{"name":"Deep Tech House After Dark","slug":"deep-tech-house-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":1.0,"playCount":3785,"tags":["electronic","deep-tech-house"],"publishDate":"2025-12-21T11:51:46.797263"},{"name":"Pure Electro Vibes","slug":"pure-electro-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.4,"playCount":3796,"tags":["disco-house","electro"],"publishDate":"2025-12-19T11:51:46.797263"},{"name":"Chillstep Sessions Vol. 70","slug":"chillstep-sessions-vol-70","owner":"technotemple","displayName":"Technotemple","qualityScore":0.33,"playCount":4936,"tags":["big-room-house","chillstep"],"publishDate":"2025-12-19T11:51:46.797263"},{"name":"Bouncy Techno Selections","slug":"bouncy-techno-selections","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.85,"playCount":680,"tags":["bouncy-techno"],"publishDate":"2025-12-18T11:51:46.797263"},{"name":"Soul Selections","slug":"soul-selections","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.33,"playCount":2081,"tags":["soul","progressive-edm"],"publishDate":"2025-12-17T11:51:46.797263"},{"name":"Post-dubstep Sessions Vol. 88","slug":"post-dubstep-sessions-vol-88","owner":"technotemple","displayName":"Technotemple","qualityScore":0.93,"playCount":4699,"tags":["ambient-drum-and-bass","post-dubstep"],"publishDate":"2025-12-17T11:51:46.797263"},{"name":"The Vocal House Show","slug":"the-vocal-house-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.68,"playCount":2982,"tags":["vocal-house","bassline"],"publishDate":"2025-12-16T11:51:46.797263"},{"name":"Jungle Selections","slug":"jungle-selections","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.43,"playCount":3621,"tags":["jungle"],"publishDate":"2025-12-15T11:51:46.797263"},{"name":"Essential Urban Mix","slug":"essential-urban-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.65,"playCount":874,"tags":["urban"],"publishDate":"2025-12-15T11:51:46.797263"},{"name":"Essential Progressive House Mix","slug":"essential-progressive-house-mix","owner":"bassculture","displayName":"Bassculture","qualityScore":0.93,"playCount":1945,"tags":["progressive-house","electroacoustic"],"publishDate":"2025-12-14T11:51:46.797263"},{"name":"Future Collective","slug":"future-collective","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.97,"playCount":4838,"tags":["future"],"publishDate":"2025-12-14T11:51:46.797263"},{"name":"Blue-eyed Soul Underground","slug":"blue-eyed-soul-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.54,"playCount":674,"tags":["blue-eyed-soul"],"publishDate":"2025-12-14T11:51:46.797263"},{"name":"Essential Progressive Electronic Mix","slug":"essential-progressive-electronic-mix","owner":"deepspace","displayName":"Deepspace","qualityScore":0.99,"playCount":4914,"tags":["progressive-electronic","drill"],"publishDate":"2025-12-13T11:51:46.797263"},{"name":"Folk After Dark","slug":"folk-after-dark","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.72,"playCount":1833,"tags":["folk"],"publishDate":"2025-12-12T11:51:46.797263"},{"name":"Bass Music Collective","slug":"bass-music-collective","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.35,"playCount":3012,"tags":["bass-music"],"publishDate":"2025-12-12T11:51:46.797263"},{"name":"Late Night Techno","slug":"late-night-techno","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.51,"playCount":1112,"tags":["techno"],"publishDate":"2025-12-12T10:37:01.420103"},{"name":"Essential Deep Techno Mix","slug":"essential-deep-techno-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.42,"playCount":4047,"tags":["deep-techno","downtempo"],"publishDate":"2025-12-09T11:51:46.797263"},{"name":"The Euphoric Hardstyle Show","slug":"the-euphoric-hardstyle-show","owner":"technotemple","displayName":"Technotemple","qualityScore":0.64,"playCount":352,"tags":["euphoric-hardstyle"],"publishDate":"2025-12-09T11:51:46.797263"},{"name":"Classical Sessions Vol. 18","slug":"classical-sessions-vol-18","owner":"technotemple","displayName":"Technotemple","qualityScore":0.73,"playCount":3334,"tags":["reggae","classical"],"publishDate":"2025-12-08T11:51:46.797263"},{"name":"Classical Selections","slug":"classical-selections","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.69,"playCount":1790,"tags":["classical"],"publishDate":"2025-12-07T10:37:01.420103"},{"name":"The Afrobeats Show","slug":"the-afrobeats-show","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.3,"playCount":2739,"tags":["afrobeats"],"publishDate":"2025-12-05T11:51:46.797263"},{"name":"Industrial After Dark","slug":"industrial-after-dark","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.75,"playCount":4887,"tags":["industrial"],"publishDate":"2025-12-05T11:51:46.797263"},{"name":"Disco House Selections","slug":"disco-house-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.88,"playCount":4367,"tags":["disco-house"],"publishDate":"2025-12-05T11:51:46.797263"},{"name":"The Ambient Techno Show","slug":"the-ambient-techno-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.79,"playCount":462,"tags":["ambient-techno"],"publishDate":"2025-12-05T11:51:46.797263"},{"name":"Essential R&B Mix","slug":"essential-rb-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.35,"playCount":1427,"tags":["rb","hi-nrg"],"publishDate":"2025-12-04T11:51:46.797263"},{"name":"Electronica Sessions Vol. 33","slug":"electronica-sessions-vol-33","owner":"bassculture","displayName":"Bassculture","qualityScore":0.93,"playCount":1136,"tags":["electronica","industrial"],"publishDate":"2025-12-03T11:51:46.797263"},{"name":"Jazz After Dark","slug":"jazz-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.33,"playCount":2251,"tags":["jazz"],"publishDate":"2025-12-02T10:37:01.420103"},{"name":"Metal After Dark","slug":"metal-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.49,"playCount":4252,"tags":["metal","rock"],"publishDate":"2025-12-01T11:51:46.797263"},{"name":"Late Night World Music","slug":"late-night-world-music","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.61,"playCount":4232,"tags":["world-music"],"publishDate":"2025-12-01T10:37:01.420103"},{"name":"The Afrobeats Show","slug":"the-afrobeats-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.61,"playCount":1996,"tags":["afrobeats"],"publishDate":"2025-11-29T11:51:46.797263"},{"name":"Tribal House Sessions Vol. 50","slug":"tribal-house-sessions-vol-50","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.94,"playCount":3723,"tags":["tribal-house"],"publishDate":"2025-11-29T11:51:46.797263"},{"name":"Pure Balearic Trance Vibes","slug":"pure-balearic-trance-vibes","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.51,"playCount":257,"tags":["balearic-trance"],"publishDate":"2025-11-29T11:51:46.797263"},{"name":"Pure Progressive EDM Vibes","slug":"pure-progressive-edm-vibes","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.53,"playCount":1779,"tags":["progressive-edm"],"publishDate":"2025-11-29T11:51:46.797263"},{"name":"Electro-disco Selections","slug":"electro-disco-selections","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.46,"playCount":3211,"tags":["electro-disco"],"publishDate":"2025-11-28T11:51:46.797263"},{"name":"Pure Ambient Vibes","slug":"pure-ambient-vibes","owner":"bassculture","displayName":"Bassculture","qualityScore":0.71,"playCount":555,"tags":["ambient","dark-psytrance"],"publishDate":"2025-11-27T11:51:46.797263"},{"name":"Electro-disco Underground","slug":"electro-disco-underground","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.34,"playCount":3630,"tags":["electro-disco","progressive-electronic"],"publishDate":"2025-11-27T11:51:46.797263"},{"name":"Pure Indie Dance Vibes","slug":"pure-indie-dance-vibes","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.99,"playCount":185,"tags":["downtempo","indie-dance"],"publishDate":"2025-11-26T11:51:46.797263"},{"name":"Late Night Drum & Bass","slug":"late-night-drum-bass","owner":"bassculture","displayName":"Bassculture","qualityScore":0.39,"playCount":3858,"tags":["drum-bass","reggae"],"publishDate":"2025-11-26T10:37:01.420103"},{"name":"Acid Techno After Dark","slug":"acid-techno-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.44,"playCount":3937,"tags":["bass-club-music","acid-techno"],"publishDate":"2025-11-25T11:51:46.797263"},{"name":"The Chiptune Show","slug":"the-chiptune-show","owner":"technotemple","displayName":"Technotemple","qualityScore":0.62,"playCount":1095,"tags":["chiptune"],"publishDate":"2025-11-25T11:51:46.797263"},{"name":"The Electronica Show","slug":"the-electronica-show","owner":"bassculture","displayName":"Bassculture","qualityScore":0.52,"playCount":2726,"tags":["electronica"],"publishDate":"2025-11-25T10:37:01.420103"},{"name":"Essential Blues Mix","slug":"essential-blues-mix","owner":"deepspace","displayName":"Deepspace","qualityScore":0.94,"playCount":2602,"tags":["blues"],"publishDate":"2025-11-24T11:51:46.797263"},{"name":"Club House Sessions Vol. 29","slug":"club-house-sessions-vol-29","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.36,"playCount":3223,"tags":["club-house"],"publishDate":"2025-11-24T11:51:46.797263"},{"name":"Essential Dark Electro Mix","slug":"essential-dark-electro-mix","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.75,"playCount":1664,"tags":["dark-electro"],"publishDate":"2025-11-24T11:51:46.797263"},{"name":"Jazz Collective","slug":"jazz-collective","owner":"deepspace","displayName":"Deepspace","qualityScore":0.91,"playCount":4696,"tags":["jazz"],"publishDate":"2025-11-24T10:37:01.420103"},{"name":"Industrial Selections","slug":"industrial-selections","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.3,"playCount":2588,"tags":["industrial"],"publishDate":"2025-11-23T11:51:46.797263"},{"name":"Chicago House Selections","slug":"chicago-house-selections","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.64,"playCount":4627,"tags":["chicago-house"],"publishDate":"2025-11-23T11:51:46.797263"},{"name":"Big Beat Underground","slug":"big-beat-underground","owner":"technotemple","displayName":"Technotemple","qualityScore":0.41,"playCount":3038,"tags":["big-beat"],"publishDate":"2025-11-23T11:51:46.797263"},{"name":"Pure Downtempo Vibes","slug":"pure-downtempo-vibes","owner":"bassculture","displayName":"Bassculture","qualityScore":0.42,"playCount":1186,"tags":["breakbeat","downtempo"],"publishDate":"2025-11-22T11:51:46.797263"},{"name":"Essential Blue-eyed Soul Mix","slug":"essential-blue-eyed-soul-mix","owner":"technotemple","displayName":"Technotemple","qualityScore":0.8,"playCount":2649,"tags":["blue-eyed-soul"],"publishDate":"2025-11-21T11:51:46.797263"},{"name":"Jazz Collective","slug":"jazz-collective","owner":"technotemple","displayName":"Technotemple","qualityScore":0.96,"playCount":3951,"tags":["jazz"],"publishDate":"2025-11-19T11:51:46.797263"},{"name":"Broken Beat Underground","slug":"broken-beat-underground","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.45,"playCount":2822,"tags":["broken-beat"],"publishDate":"2025-11-18T11:51:46.797263"},{"name":"Rockabilly Selections","slug":"rockabilly-selections","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.85,"playCount":4328,"tags":["rockabilly"],"publishDate":"2025-11-18T11:51:46.797263"},{"name":"Breakbeat Sessions Vol. 46","slug":"breakbeat-sessions-vol-46","owner":"bassculture","displayName":"Bassculture","qualityScore":0.85,"playCount":4137,"tags":["breakbeat"],"publishDate":"2025-11-17T11:51:46.797263"},{"name":"Electronica Mixtape #61","slug":"electronica-mixtape-61","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.86,"playCount":4512,"tags":["electronica"],"publishDate":"2025-11-16T11:51:46.797263"},{"name":"Late Night Deep House","slug":"late-night-deep-house","owner":"bassculture","displayName":"Bassculture","qualityScore":0.81,"playCount":4246,"tags":["deep-house","ambient-drum-and-bass"],"publishDate":"2025-11-16T11:51:46.797263"},{"name":"Cold Wave Sessions Vol. 87","slug":"cold-wave-sessions-vol-87","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.4,"playCount":4630,"tags":["cold-wave"],"publishDate":"2025-11-16T11:51:46.797263"},{"name":"Essential Reggae Mix","slug":"essential-reggae-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.67,"playCount":147,"tags":["reggae"],"publishDate":"2025-11-14T10:37:01.420103"},{"name":"Bass & Club Music Mixtape #80","slug":"bass-club-music-mixtape-80","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.7,"playCount":1227,"tags":["bass-club-music"],"publishDate":"2025-11-13T11:51:46.797263"},{"name":"Late Night Nu Jazz","slug":"late-night-nu-jazz","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.94,"playCount":3731,"tags":["nu-jazz"],"publishDate":"2025-11-13T11:51:46.797263"},{"name":"The Funk Show","slug":"the-funk-show","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.76,"playCount":3049,"tags":["funk"],"publishDate":"2025-11-12T11:51:46.797263"},{"name":"Electro-industrial Selections","slug":"electro-industrial-selections","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.35,"playCount":1507,"tags":["electro-industrial"],"publishDate":"2025-11-12T11:51:46.797263"},{"name":"Classic House Underground","slug":"classic-house-underground","owner":"deepspace","displayName":"Deepspace","qualityScore":0.42,"playCount":1056,"tags":["classic-house"],"publishDate":"2025-11-10T11:51:46.797263"},{"name":"Late Night Electro Hop","slug":"late-night-electro-hop","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":1.0,"playCount":3644,"tags":["electro-hop"],"publishDate":"2025-11-09T11:51:46.797263"},{"name":"The Early Hardcore Show","slug":"the-early-hardcore-show","owner":"bassculture","displayName":"Bassculture","qualityScore":0.84,"playCount":4223,"tags":["early-hardcore"],"publishDate":"2025-11-09T11:51:46.797263"},{"name":"The Dutch House Show","slug":"the-dutch-house-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.67,"playCount":463,"tags":["dutch-house","lounge-music"],"publishDate":"2025-11-07T11:51:46.797263"},{"name":"The R&B Show","slug":"the-rb-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.93,"playCount":3448,"tags":["rb","electronic-body-music"],"publishDate":"2025-11-06T11:51:46.797263"},{"name":"Pure Ambient Vibes","slug":"pure-ambient-vibes","owner":"deepspace","displayName":"Deepspace","qualityScore":0.95,"playCount":394,"tags":["ambient"],"publishDate":"2025-11-05T10:37:01.420103"},{"name":"The Jazz Show","slug":"the-jazz-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.74,"playCount":2530,"tags":["jazz"],"publishDate":"2025-11-04T11:51:46.797263"},{"name":"Country Sessions Vol. 29","slug":"country-sessions-vol-29","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.5,"playCount":3961,"tags":["country"],"publishDate":"2025-11-03T11:51:46.797263"},{"name":"Reggaeton Collective","slug":"reggaeton-collective","owner":"bassculture","displayName":"Bassculture","qualityScore":0.71,"playCount":4655,"tags":["reggaeton"],"publishDate":"2025-11-02T11:51:46.797263"},{"name":"Blues Collective","slug":"blues-collective","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.65,"playCount":4364,"tags":["blues"],"publishDate":"2025-11-01T11:51:46.797263"},{"name":"Essential Trance Mix","slug":"essential-trance-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.49,"playCount":3964,"tags":["trance"],"publishDate":"2025-11-01T10:37:01.420103"},{"name":"The Afrobeat Show","slug":"the-afrobeat-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.71,"playCount":2448,"tags":["garage-ukg","afrobeat"],"publishDate":"2025-10-29T11:51:46.797263"},{"name":"The Rockabilly Show","slug":"the-rockabilly-show","owner":"deepspace","displayName":"Deepspace","qualityScore":0.76,"playCount":3164,"tags":["rockabilly"],"publishDate":"2025-10-29T11:51:46.797263"},{"name":"Techno Collective","slug":"techno-collective","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.38,"playCount":2233,"tags":["techno"],"publishDate":"2025-10-29T10:37:01.420103"},{"name":"The Reggaeton Show","slug":"the-reggaeton-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.6,"playCount":1057,"tags":["reggaeton"],"publishDate":"2025-10-28T11:51:46.797263"},{"name":"Pure Acid Techno Vibes","slug":"pure-acid-techno-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.6,"playCount":4696,"tags":["acid-techno"],"publishDate":"2025-10-28T11:51:46.797263"},{"name":"World After Dark","slug":"world-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.63,"playCount":984,"tags":["world"],"publishDate":"2025-10-28T11:51:46.797263"},{"name":"Techno Selections","slug":"techno-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.35,"playCount":689,"tags":["techno"],"publishDate":"2025-10-26T10:37:01.420103"},{"name":"Pure Ambient Vibes","slug":"pure-ambient-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.33,"playCount":335,"tags":["ambient"],"publishDate":"2025-10-25T10:37:01.420103"},{"name":"House Mixtape #43","slug":"house-mixtape-43","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.57,"playCount":1899,"tags":["house","drum-bass"],"publishDate":"2025-10-24T10:37:01.420103"},{"name":"Late Night Disco","slug":"late-night-disco","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.98,"playCount":4178,"tags":["disco"],"publishDate":"2025-10-23T10:37:01.420103"},{"name":"Late Night Electronic","slug":"late-night-electronic","owner":"technotemple","displayName":"Technotemple","qualityScore":0.48,"playCount":4710,"tags":["electronic"],"publishDate":"2025-10-22T11:51:46.797263"},{"name":"The UK Hip Hop Show","slug":"the-uk-hip-hop-show","owner":"bassculture","displayName":"Bassculture","qualityScore":0.49,"playCount":687,"tags":["electro-hop","uk-hip-hop"],"publishDate":"2025-10-22T11:51:46.797263"},{"name":"Electro Swing Mixtape #36","slug":"electro-swing-mixtape-36","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.42,"playCount":1480,"tags":["dance","electro-swing"],"publishDate":"2025-10-21T11:51:46.797263"},{"name":"Dance Sessions Vol. 28","slug":"dance-sessions-vol-28","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.49,"playCount":727,"tags":["dance"],"publishDate":"2025-10-20T11:51:46.797263"},{"name":"Pure Bass House Vibes","slug":"pure-bass-house-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.55,"playCount":2892,"tags":["bass-house","electronic-body-music"],"publishDate":"2025-10-19T11:51:46.797263"},{"name":"Electronica After Dark","slug":"electronica-after-dark","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.99,"playCount":1061,"tags":["electronica"],"publishDate":"2025-10-18T10:37:01.420103"},{"name":"Tech House Mixtape #48","slug":"tech-house-mixtape-48","owner":"bassculture","displayName":"Bassculture","qualityScore":0.43,"playCount":644,"tags":["tech-house"],"publishDate":"2025-10-17T11:51:46.797263"},{"name":"The Bouncy Techno Show","slug":"the-bouncy-techno-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.39,"playCount":3786,"tags":["bouncy-techno"],"publishDate":"2025-10-17T11:51:46.797263"},{"name":"Late Night Dark Psytrance","slug":"late-night-dark-psytrance","owner":"bassculture","displayName":"Bassculture","qualityScore":0.68,"playCount":3272,"tags":["dark-psytrance","balearic"],"publishDate":"2025-10-17T11:51:46.797263"},{"name":"Drill Underground","slug":"drill-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.33,"playCount":3359,"tags":["drill"],"publishDate":"2025-10-17T11:51:46.797263"},{"name":"The Rock 'n' Roll Show","slug":"the-rock-n-roll-show","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.5,"playCount":2363,"tags":["rock-n-roll"],"publishDate":"2025-10-17T11:51:46.797263"},{"name":"Disco Selections","slug":"disco-selections","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.58,"playCount":4003,"tags":["disco"],"publishDate":"2025-10-17T10:37:01.420103"},{"name":"Dutch House Sessions Vol. 11","slug":"dutch-house-sessions-vol-11","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.93,"playCount":3408,"tags":["dutch-house"],"publishDate":"2025-10-16T11:51:46.797263"},{"name":"Essential Donk Mix","slug":"essential-donk-mix","owner":"bassculture","displayName":"Bassculture","qualityScore":0.61,"playCount":2575,"tags":["donk"],"publishDate":"2025-10-15T11:51:46.797263"},{"name":"UK Hip Hop Underground","slug":"uk-hip-hop-underground","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.95,"playCount":4534,"tags":["uk-hip-hop"],"publishDate":"2025-10-15T11:51:46.797263"},{"name":"Dub Mixtape #98","slug":"dub-mixtape-98","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.36,"playCount":4673,"tags":["dub"],"publishDate":"2025-10-14T11:51:46.797263"},{"name":"Worldbeat Mixtape #98","slug":"worldbeat-mixtape-98","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.67,"playCount":3984,"tags":["worldbeat"],"publishDate":"2025-10-14T11:51:46.797263"},{"name":"Pure Deep Techno Vibes","slug":"pure-deep-techno-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.79,"playCount":3371,"tags":["deep-techno"],"publishDate":"2025-10-13T11:51:46.797263"},{"name":"Electronica Underground","slug":"electronica-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.84,"playCount":653,"tags":["electronica"],"publishDate":"2025-10-12T11:51:46.797263"},{"name":"Afro House Sessions Vol. 56","slug":"afro-house-sessions-vol-56","owner":"deepspace","displayName":"Deepspace","qualityScore":0.65,"playCount":3889,"tags":["afro-house"],"publishDate":"2025-10-12T11:51:46.797263"},{"name":"Essential Lounge Music Mix","slug":"essential-lounge-music-mix","owner":"deepspace","displayName":"Deepspace","qualityScore":0.86,"playCount":3877,"tags":["experimental","lounge-music"],"publishDate":"2025-10-11T11:51:46.797263"},{"name":"Punk Collective","slug":"punk-collective","owner":"deepspace","displayName":"Deepspace","qualityScore":0.52,"playCount":1258,"tags":["punk","dembow"],"publishDate":"2025-10-09T11:51:46.797263"},{"name":"Minimal Techno Collective","slug":"minimal-techno-collective","owner":"deepspace","displayName":"Deepspace","qualityScore":0.76,"playCount":3119,"tags":["minimal-techno"],"publishDate":"2025-10-09T11:51:46.797263"},{"name":"Remixes Underground","slug":"remixes-underground","owner":"technotemple","displayName":"Technotemple","qualityScore":0.34,"playCount":2350,"tags":["remixes"],"publishDate":"2025-10-09T11:51:46.797263"},{"name":"Rap Selections","slug":"rap-selections","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.71,"playCount":2073,"tags":["rap"],"publishDate":"2025-10-08T11:51:46.797263"},{"name":"Late Night Underground","slug":"late-night-underground","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.66,"playCount":1156,"tags":["underground"],"publishDate":"2025-10-07T11:51:46.797263"},{"name":"Essential Experimental Mix","slug":"essential-experimental-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.38,"playCount":3233,"tags":["experimental","downtempo"],"publishDate":"2025-10-06T11:51:46.797263"},{"name":"Nu-disco Sessions Vol. 89","slug":"nu-disco-sessions-vol-89","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.55,"playCount":4455,"tags":["nu-disco"],"publishDate":"2025-10-06T11:51:46.797263"},{"name":"Deep House Mixtape #74","slug":"deep-house-mixtape-74","owner":"technotemple","displayName":"Technotemple","qualityScore":0.37,"playCount":2602,"tags":["deep-house","classical"],"publishDate":"2025-10-06T10:37:01.420103"},{"name":"Punk Selections","slug":"punk-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.6,"playCount":3766,"tags":["punk","melodic-house-techno"],"publishDate":"2025-10-05T11:51:46.797263"},{"name":"Essential Electro House Mix","slug":"essential-electro-house-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.96,"playCount":1417,"tags":["electro-house"],"publishDate":"2025-10-05T11:51:46.797263"},{"name":"Electro-disco Collective","slug":"electro-disco-collective","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.96,"playCount":3979,"tags":["electronica","electro-disco"],"publishDate":"2025-10-05T11:51:46.797263"},{"name":"Late Night Progressive Rock","slug":"late-night-progressive-rock","owner":"technotemple","displayName":"Technotemple","qualityScore":0.35,"playCount":55,"tags":["progressive-rock"],"publishDate":"2025-10-05T11:51:46.797263"},{"name":"The Ambient Show","slug":"the-ambient-show","owner":"technotemple","displayName":"Technotemple","qualityScore":0.48,"playCount":4511,"tags":["ambient"],"publishDate":"2025-10-05T10:37:01.420103"},{"name":"Indie Dance After Dark","slug":"indie-dance-after-dark","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.39,"playCount":2517,"tags":["indie-dance"],"publishDate":"2025-10-04T11:51:46.797263"},{"name":"Late Night Classic House","slug":"late-night-classic-house","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.42,"playCount":391,"tags":["classic-house"],"publishDate":"2025-10-03T11:51:46.797263"},{"name":"Disco After Dark","slug":"disco-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.3,"playCount":670,"tags":["ambient","disco"],"publishDate":"2025-10-02T10:37:01.420103"},{"name":"Hip Hop Collective","slug":"hip-hop-collective","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.4,"playCount":4573,"tags":["hip-hop"],"publishDate":"2025-10-02T10:37:01.420103"},{"name":"House After Dark","slug":"house-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.82,"playCount":2207,"tags":["house"],"publishDate":"2025-09-28T10:37:01.420103"},{"name":"Soul & Funk Collective","slug":"soul-funk-collective","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.86,"playCount":175,"tags":["soul-funk"],"publishDate":"2025-09-28T10:37:01.420103"},{"name":"Pure Progressive EDM Vibes","slug":"pure-progressive-edm-vibes","owner":"deepspace","displayName":"Deepspace","qualityScore":0.37,"playCount":833,"tags":["dub","progressive-edm"],"publishDate":"2025-09-27T11:51:46.797263"},{"name":"The Dance Show","slug":"the-dance-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.45,"playCount":1933,"tags":["dance"],"publishDate":"2025-09-26T11:51:46.797263"},{"name":"Essential Dub Techno Mix","slug":"essential-dub-techno-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.72,"playCount":4697,"tags":["dub-techno"],"publishDate":"2025-09-26T11:51:46.797263"},{"name":"House Mixtape #27","slug":"house-mixtape-27","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.94,"playCount":897,"tags":["house","world-music"],"publishDate":"2025-09-26T10:37:01.420103"},{"name":"Dark Techno After Dark","slug":"dark-techno-after-dark","owner":"technotemple","displayName":"Technotemple","qualityScore":0.9,"playCount":369,"tags":["dark-techno"],"publishDate":"2025-09-25T11:51:46.797263"},{"name":"Dubtronica Selections","slug":"dubtronica-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.74,"playCount":3040,"tags":["dubtronica"],"publishDate":"2025-09-25T11:51:46.797263"},{"name":"Pure Future Vibes","slug":"pure-future-vibes","owner":"bassculture","displayName":"Bassculture","qualityScore":0.33,"playCount":4258,"tags":["vocal-house","future"],"publishDate":"2025-09-25T11:51:46.797263"},{"name":"Essential Remixes Mix","slug":"essential-remixes-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.4,"playCount":3018,"tags":["remixes"],"publishDate":"2025-09-24T11:51:46.797263"},{"name":"Essential Funk Mix","slug":"essential-funk-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.51,"playCount":1950,"tags":["funk"],"publishDate":"2025-09-23T11:51:46.797263"},{"name":"The House Show","slug":"the-house-show","owner":"technotemple","displayName":"Technotemple","qualityScore":1.0,"playCount":1783,"tags":["house"],"publishDate":"2025-09-22T11:51:46.797263"},{"name":"The Bass House Show","slug":"the-bass-house-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.59,"playCount":3774,"tags":["bass-house"],"publishDate":"2025-09-22T11:51:46.797263"},{"name":"Late Night Acid Techno","slug":"late-night-acid-techno","owner":"bassculture","displayName":"Bassculture","qualityScore":0.96,"playCount":3294,"tags":["acid-techno"],"publishDate":"2025-09-22T11:51:46.797263"},{"name":"Breakcore Sessions Vol. 80","slug":"breakcore-sessions-vol-80","owner":"bassculture","displayName":"Bassculture","qualityScore":0.79,"playCount":2849,"tags":["breakcore"],"publishDate":"2025-09-21T11:51:46.797263"},{"name":"Late Night Dark Wave","slug":"late-night-dark-wave","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.88,"playCount":2525,"tags":["breakcore","dark-wave"],"publishDate":"2025-09-21T11:51:46.797263"},{"name":"Blues Sessions Vol. 70","slug":"blues-sessions-vol-70","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.89,"playCount":3660,"tags":["blues"],"publishDate":"2025-09-20T11:51:46.797263"},{"name":"Jazz Sessions Vol. 54","slug":"jazz-sessions-vol-54","owner":"bassculture","displayName":"Bassculture","qualityScore":0.67,"playCount":4835,"tags":["jazz","electro-house"],"publishDate":"2025-09-20T11:51:46.797263"},{"name":"Essential Big Beat Mix","slug":"essential-big-beat-mix","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.92,"playCount":1284,"tags":["big-beat"],"publishDate":"2025-09-20T11:51:46.797263"},{"name":"Essential Underground Mix","slug":"essential-underground-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.75,"playCount":2174,"tags":["underground"],"publishDate":"2025-09-19T11:51:46.797263"},{"name":"Trance Underground","slug":"trance-underground","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.59,"playCount":4852,"tags":["trance"],"publishDate":"2025-09-18T11:51:46.797263"},{"name":"Soul & Funk Underground","slug":"soul-funk-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.43,"playCount":2235,"tags":["soul-funk"],"publishDate":"2025-09-17T10:37:01.420103"},{"name":"Electro-industrial Sessions Vol. 69","slug":"electro-industrial-sessions-vol-69","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.8,"playCount":624,"tags":["electro-industrial","rock-n-roll"],"publishDate":"2025-09-16T11:51:46.797263"},{"name":"Nu Jazz Sessions Vol. 11","slug":"nu-jazz-sessions-vol-11","owner":"deepspace","displayName":"Deepspace","qualityScore":0.57,"playCount":4554,"tags":["nu-jazz"],"publishDate":"2025-09-16T11:51:46.797263"},{"name":"Rap Mixtape #64","slug":"rap-mixtape-64","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.88,"playCount":4094,"tags":["rap","rockabilly"],"publishDate":"2025-09-15T11:51:46.797263"},{"name":"Atmospheric Drum and Bass Collective","slug":"atmospheric-drum-and-bass-collective","owner":"deepspace","displayName":"Deepspace","qualityScore":0.45,"playCount":3663,"tags":["atmospheric-drum-and-bass"],"publishDate":"2025-09-15T11:51:46.797263"},{"name":"Dark Techno Mixtape #85","slug":"dark-techno-mixtape-85","owner":"deepspace","displayName":"Deepspace","qualityScore":0.38,"playCount":4679,"tags":["dark-techno"],"publishDate":"2025-09-14T11:51:46.797263"},{"name":"Funky House Underground","slug":"funky-house-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.71,"playCount":3251,"tags":["funky-house"],"publishDate":"2025-09-13T11:51:46.797263"},{"name":"The Downtempo Show","slug":"the-downtempo-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.45,"playCount":4290,"tags":["downtempo"],"publishDate":"2025-09-13T11:51:46.797263"},{"name":"House Mixtape #25","slug":"house-mixtape-25","owner":"bassculture","displayName":"Bassculture","qualityScore":0.65,"playCount":854,"tags":["house"],"publishDate":"2025-09-12T11:51:46.797263"},{"name":"R&B After Dark","slug":"rb-after-dark","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.52,"playCount":2828,"tags":["rb","broken-beat"],"publishDate":"2025-09-12T11:51:46.797263"},{"name":"Late Night Dark Techno","slug":"late-night-dark-techno","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.46,"playCount":1633,"tags":["blues","dark-techno"],"publishDate":"2025-09-12T11:51:46.797263"},{"name":"World Music After Dark","slug":"world-music-after-dark","owner":"technotemple","displayName":"Technotemple","qualityScore":0.78,"playCount":4649,"tags":["world-music"],"publishDate":"2025-09-12T10:37:01.420103"},{"name":"Essential Electroacoustic Mix","slug":"essential-electroacoustic-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.99,"playCount":2122,"tags":["electroacoustic"],"publishDate":"2025-09-11T11:51:46.797263"},{"name":"Essential Dance-rock Mix","slug":"essential-dance-rock-mix","owner":"deepspace","displayName":"Deepspace","qualityScore":0.77,"playCount":4606,"tags":["darksynth","dance-rock"],"publishDate":"2025-09-11T11:51:46.797263"},{"name":"Dance Selections","slug":"dance-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.86,"playCount":856,"tags":["dance"],"publishDate":"2025-09-10T11:51:46.797263"},{"name":"The Darksynth Show","slug":"the-darksynth-show","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.73,"playCount":3417,"tags":["darksynth"],"publishDate":"2025-09-10T11:51:46.797263"},{"name":"Downtempo After Dark","slug":"downtempo-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.39,"playCount":2444,"tags":["downtempo"],"publishDate":"2025-09-10T11:51:46.797263"},{"name":"Pure Dance-rock Vibes","slug":"pure-dance-rock-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.68,"playCount":3492,"tags":["dance-rock"],"publishDate":"2025-09-09T11:51:46.797263"},{"name":"Late Night World Music","slug":"late-night-world-music","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.33,"playCount":1773,"tags":["world-music"],"publishDate":"2025-09-08T10:37:01.420103"},{"name":"Late Night World","slug":"late-night-world","owner":"deepspace","displayName":"Deepspace","qualityScore":0.67,"playCount":3906,"tags":["world"],"publishDate":"2025-09-07T11:51:46.797263"},{"name":"The Jazz Show","slug":"the-jazz-show","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.98,"playCount":3607,"tags":["jazz"],"publishDate":"2025-09-07T10:37:01.420103"},{"name":"Acid House Selections","slug":"acid-house-selections","owner":"bassculture","displayName":"Bassculture","qualityScore":0.39,"playCount":4692,"tags":["acid-house"],"publishDate":"2025-09-06T11:51:46.797263"},{"name":"Late Night Indie","slug":"late-night-indie","owner":"bassculture","displayName":"Bassculture","qualityScore":0.37,"playCount":3707,"tags":["indie"],"publishDate":"2025-09-06T11:51:46.797263"},{"name":"Essential Soul & Funk Mix","slug":"essential-soul-funk-mix","owner":"deepspace","displayName":"Deepspace","qualityScore":0.89,"playCount":4123,"tags":["deep-house","soul-funk"],"publishDate":"2025-09-06T10:37:01.420103"},{"name":"Pure Chiptune Vibes","slug":"pure-chiptune-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.39,"playCount":3553,"tags":["chiptune"],"publishDate":"2025-09-05T11:51:46.797263"},{"name":"Trance Underground","slug":"trance-underground","owner":"bassculture","displayName":"Bassculture","qualityScore":0.86,"playCount":2292,"tags":["trance"],"publishDate":"2025-09-05T10:37:01.420103"},{"name":"Progressive House Collective","slug":"progressive-house-collective","owner":"bassculture","displayName":"Bassculture","qualityScore":0.46,"playCount":523,"tags":["folk","progressive-house"],"publishDate":"2025-09-04T11:51:46.797263"},{"name":"Deep House Sessions Vol. 18","slug":"deep-house-sessions-vol-18","owner":"bassculture","displayName":"Bassculture","qualityScore":0.95,"playCount":4896,"tags":["deep-house"],"publishDate":"2025-09-03T10:37:01.420103"},{"name":"Late Night Ambient Drum and Bass","slug":"late-night-ambient-drum-and-bass","owner":"bassculture","displayName":"Bassculture","qualityScore":0.5,"playCount":4863,"tags":["disco","ambient-drum-and-bass"],"publishDate":"2025-09-02T11:51:46.797263"},{"name":"Big Room House After Dark","slug":"big-room-house-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.74,"playCount":4394,"tags":["big-room-house","urban"],"publishDate":"2025-08-31T11:51:46.797263"},{"name":"Late Night Tech House","slug":"late-night-tech-house","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.76,"playCount":4222,"tags":["tech-house"],"publishDate":"2025-08-29T11:51:46.797263"},{"name":"Breaks Selections","slug":"breaks-selections","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.65,"playCount":4304,"tags":["breaks"],"publishDate":"2025-08-28T11:51:46.797263"},{"name":"Indie Mixtape #18","slug":"indie-mixtape-18","owner":"deepspace","displayName":"Deepspace","qualityScore":0.61,"playCount":1041,"tags":["indie"],"publishDate":"2025-08-28T11:51:46.797263"},{"name":"House Underground","slug":"house-underground","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.87,"playCount":3593,"tags":["house"],"publishDate":"2025-08-28T10:37:01.420103"},{"name":"Electro Swing After Dark","slug":"electro-swing-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.52,"playCount":1812,"tags":["electro-swing"],"publishDate":"2025-08-26T11:51:46.797263"},{"name":"Reggae After Dark","slug":"reggae-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.89,"playCount":2622,"tags":["disco","reggae"],"publishDate":"2025-08-26T10:37:01.420103"},{"name":"Progressive Rock After Dark","slug":"progressive-rock-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.87,"playCount":1603,"tags":["progressive-rock"],"publishDate":"2025-08-25T11:51:46.797263"},{"name":"Essential Folk Mix","slug":"essential-folk-mix","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.35,"playCount":2001,"tags":["folk"],"publishDate":"2025-08-23T11:51:46.797263"},{"name":"Ambient Drum and Bass After Dark","slug":"ambient-drum-and-bass-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.59,"playCount":2631,"tags":["ambient-drum-and-bass"],"publishDate":"2025-08-23T11:51:46.797263"},{"name":"Pure Bass Music Vibes","slug":"pure-bass-music-vibes","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.53,"playCount":4839,"tags":["bouncy-techno","bass-music"],"publishDate":"2025-08-23T11:51:46.797263"},{"name":"Pure Dream Trance Vibes","slug":"pure-dream-trance-vibes","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.78,"playCount":1835,"tags":["dream-trance"],"publishDate":"2025-08-22T11:51:46.797263"},{"name":"Reggae Underground","slug":"reggae-underground","owner":"bassculture","displayName":"Bassculture","qualityScore":0.49,"playCount":2145,"tags":["reggae"],"publishDate":"2025-08-19T11:51:46.797263"},{"name":"EDM Mixtape #36","slug":"edm-mixtape-36","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.89,"playCount":3174,"tags":["edm"],"publishDate":"2025-08-16T11:51:46.797263"},{"name":"Ambient Collective","slug":"ambient-collective","owner":"bassculture","displayName":"Bassculture","qualityScore":0.59,"playCount":695,"tags":["ambient"],"publishDate":"2025-08-16T10:37:01.420103"},{"name":"Essential Hip Hop Mix","slug":"essential-hip-hop-mix","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.92,"playCount":645,"tags":["hip-hop","bouncy-techno"],"publishDate":"2025-08-15T11:51:46.797263"},{"name":"The Drum & Bass Show","slug":"the-drum-bass-show","owner":"bassculture","displayName":"Bassculture","qualityScore":0.31,"playCount":3714,"tags":["drum-bass","classical"],"publishDate":"2025-08-15T10:37:01.420103"},{"name":"Bass & Club Music After Dark","slug":"bass-club-music-after-dark","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.31,"playCount":982,"tags":["bass-club-music"],"publishDate":"2025-08-13T11:51:46.797263"},{"name":"Bass House After Dark","slug":"bass-house-after-dark","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.86,"playCount":334,"tags":["bass-house"],"publishDate":"2025-08-13T11:51:46.797263"},{"name":"The Reggae Show","slug":"the-reggae-show","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.9,"playCount":2138,"tags":["techno","reggae"],"publishDate":"2025-08-13T10:37:01.420103"},{"name":"Acid House Underground","slug":"acid-house-underground","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.62,"playCount":2812,"tags":["acid-house"],"publishDate":"2025-08-12T11:51:46.797263"},{"name":"Electronica Sessions Vol. 95","slug":"electronica-sessions-vol-95","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.75,"playCount":1413,"tags":["electronica"],"publishDate":"2025-08-11T10:37:01.420103"},{"name":"Chicago House Mixtape #69","slug":"chicago-house-mixtape-69","owner":"technotemple","displayName":"Technotemple","qualityScore":0.97,"playCount":1814,"tags":["chicago-house"],"publishDate":"2025-08-10T11:51:46.797263"},{"name":"Bass Music Sessions Vol. 47","slug":"bass-music-sessions-vol-47","owner":"technotemple","displayName":"Technotemple","qualityScore":0.52,"playCount":3090,"tags":["bass-music"],"publishDate":"2025-08-10T11:51:46.797263"},{"name":"Dark Wave Underground","slug":"dark-wave-underground","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.36,"playCount":277,"tags":["dark-wave"],"publishDate":"2025-08-09T11:51:46.797263"},{"name":"Reggae After Dark","slug":"reggae-after-dark","owner":"bassculture","displayName":"Bassculture","qualityScore":0.92,"playCount":3317,"tags":["reggae"],"publishDate":"2025-08-09T10:37:01.420103"},{"name":"The Breaks Show","slug":"the-breaks-show","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.91,"playCount":1628,"tags":["breaks","chiptune"],"publishDate":"2025-08-08T11:51:46.797263"},{"name":"The Club House Show","slug":"the-club-house-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.74,"playCount":3261,"tags":["club-house"],"publishDate":"2025-08-07T11:51:46.797263"},{"name":"Donk Sessions Vol. 83","slug":"donk-sessions-vol-83","owner":"vinyldigger","displayName":"Vinyldigger","qualityScore":0.99,"playCount":4386,"tags":["hi-nrg","donk"],"publishDate":"2025-08-07T11:51:46.797263"},{"name":"Late Night Latin House","slug":"late-night-latin-house","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.74,"playCount":3952,"tags":["latin-house"],"publishDate":"2025-08-06T11:51:46.797263"},{"name":"Cold Wave Underground","slug":"cold-wave-underground","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.83,"playCount":1165,"tags":["chillout","cold-wave"],"publishDate":"2025-08-06T11:51:46.797263"},{"name":"Jazz Selections","slug":"jazz-selections","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.32,"playCount":939,"tags":["disco","jazz"],"publishDate":"2025-08-06T10:37:01.420103"},{"name":"Dubstep Underground","slug":"dubstep-underground","owner":"deepspace","displayName":"Deepspace","qualityScore":0.61,"playCount":1421,"tags":["dubstep","rock-n-roll"],"publishDate":"2025-08-05T11:51:46.797263"},{"name":"Pure Detroit Techno Vibes","slug":"pure-detroit-techno-vibes","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.57,"playCount":3290,"tags":["detroit-techno"],"publishDate":"2025-08-05T11:51:46.797263"},{"name":"The Electro-industrial Show","slug":"the-electro-industrial-show","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.9,"playCount":4701,"tags":["electro-industrial"],"publishDate":"2025-08-05T11:51:46.797263"},{"name":"Essential Hip Hop Mix","slug":"essential-hip-hop-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.32,"playCount":341,"tags":["hip-hop"],"publishDate":"2025-08-05T10:37:01.420103"},{"name":"Deep House Mixtape #93","slug":"deep-house-mixtape-93","owner":"technotemple","displayName":"Technotemple","qualityScore":0.9,"playCount":1810,"tags":["deep-house"],"publishDate":"2025-08-04T10:37:01.420103"},{"name":"Drum & Bass Selections","slug":"drum-bass-selections","owner":"househeaduk","displayName":"Househeaduk","qualityScore":0.33,"playCount":492,"tags":["drum-bass"],"publishDate":"2025-08-03T10:37:01.420103"},{"name":"Late Night Trance","slug":"late-night-trance","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.49,"playCount":1819,"tags":["trance","dark-electro"],"publishDate":"2025-08-02T11:51:46.797263"},{"name":"Essential Classic House Mix","slug":"essential-classic-house-mix","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.54,"playCount":408,"tags":["classic-house"],"publishDate":"2025-08-02T11:51:46.797263"},{"name":"Deep House Selections","slug":"deep-house-selections","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.46,"playCount":2799,"tags":["deep-house"],"publishDate":"2025-08-02T11:51:46.797263"},{"name":"Late Night Minimal Techno","slug":"late-night-minimal-techno","owner":"nightowlmixes","displayName":"Nightowlmixes","qualityScore":0.89,"playCount":1007,"tags":["minimal-techno"],"publishDate":"2025-08-01T11:51:46.797263"},{"name":"Late Night Soul","slug":"late-night-soul","owner":"groovemerchant","displayName":"Groovemerchant","qualityScore":0.82,"playCount":2908,"tags":["soul"],"publishDate":"2025-07-31T11:51:46.797263"},{"name":"Balearic Trance After Dark","slug":"balearic-trance-after-dark","owner":"djmaria","displayName":"Dj Maria","qualityScore":0.86,"playCount":3817,"tags":["balearic-trance"],"publishDate":"2025-07-31T11:51:46.797263"}]};
+
+    function discoverShow(genreSlugs, excludeSlugs) {
+      const now = new Date();
+      const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      const excludeSet = new Set(excludeSlugs || []);
+      const genreSet = new Set(genreSlugs);
+
+      const candidates = SEED_DATA.shows
+        .filter(show => {
+          if (excludeSet.has(show.slug)) return false;
+          if (show.qualityScore < 0.5) return false;
+          const pubDate = new Date(show.publishDate);
+          if (pubDate < oneYearAgo) return false;
+          return show.tags.some(t => genreSet.has(t));
+        })
+        .map(show => {
+          const genreMatchCount = show.tags.filter(t => genreSet.has(t)).length;
+          return { ...show, genreMatchCount };
+        })
+        .sort((a, b) => {
+          if (b.genreMatchCount !== a.genreMatchCount) return b.genreMatchCount - a.genreMatchCount;
+          return b.playCount - a.playCount;
+        });
+
+      if (candidates.length === 0) return null;
+      const s = candidates[0];
+      return {
+        slug: s.slug,
+        name: s.name,
+        ownerInfo: { username: s.owner, displayName: s.displayName },
+        qualityScore: s.qualityScore,
+        playCount: s.playCount,
+      };
+    }
+
+    const TOP_GENRES = [
+      'afrobeats','ambient','bass-club-music','blues','chillout',
+      'classical','country','dancehall','disco','drum-and-bass',
+      'dub','dubstep','edm','folk','funk','garage-ukg','hardcore',
+      'hip-hop','house','jazz','jungle','metal','pop','punk',
+      'rb','reggae','reggaeton','rock','soul','techno','trance',
+    ];
+
+    // -----------------------------------------------------------------------
+    // SVG Icons
+    // -----------------------------------------------------------------------
+    const Icons = {
+      search: (props) => <svg width={props.size||18} height={props.size||18} viewBox="0 0 24 24" fill="none" stroke={props.color||"#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+      home: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+      live: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.93 19.07A10 10 0 0119.07 4.93"/><path d="M7.76 16.24a6 6 0 018.49-8.49"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>,
+      genres: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+      trending: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+      library: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="4" y2="18"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="14" y1="6" x2="14" y2="18"/><line x1="19" y1="8" x2="19" y2="16"/></svg>,
+      community: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+      bell: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+      mail: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+      plus: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+      menu: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+      chevron: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+    };
+
+    // -----------------------------------------------------------------------
+    // Top Header Bar
+    // -----------------------------------------------------------------------
+    function TopHeader() {
+      return (
+        <header style={headerS.bar}>
+          <div style={headerS.left}>
+            <a href="#" style={headerS.logo}>M→XCLOUD</a>
+            <div style={headerS.searchWrap}>
+              <Icons.search size={16} color="#999" />
+              <input placeholder="Search" style={headerS.searchInput} />
+            </div>
+          </div>
+          <div style={headerS.right}>
+            <button style={headerS.navBtn}>Listen <Icons.chevron /></button>
+            <button style={headerS.navBtn}>Creator tools <Icons.chevron /></button>
+            <button style={headerS.navBtn}>Plans <Icons.chevron /></button>
+            <button style={headerS.createBtn}><Icons.plus /> Create</button>
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <button style={headerS.iconBtn}><Icons.bell /></button>
+              <span style={headerS.badge}>6</span>
+            </div>
+            <button style={headerS.iconBtn}><Icons.mail /></button>
+            <div style={headerS.avatarGroup}>
+              <div style={{ ...headerS.avatar, background: '#e8a030' }} />
+              <div style={{ ...headerS.avatar, background: '#c050e0' }} />
+            </div>
+            <button style={headerS.iconBtn}><Icons.menu /></button>
+          </div>
+        </header>
+      );
+    }
+
+    const headerS = {
+      bar: {
+        position: 'fixed', top: 0, left: 0, right: 0, height: '56px', zIndex: 200,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 20px', background: '#fff', borderBottom: '1px solid #eee',
+      },
+      left: { display: 'flex', alignItems: 'center', gap: '16px' },
+      logo: {
+        fontWeight: 800, fontSize: '18px', color: '#1a1a1a', textDecoration: 'none',
+        letterSpacing: '-0.5px', whiteSpace: 'nowrap',
+      },
+      searchWrap: {
+        display: 'flex', alignItems: 'center', gap: '8px',
+        background: '#f5f5f5', borderRadius: '6px', padding: '7px 14px',
+        width: '200px',
+      },
+      searchInput: {
+        border: 'none', outline: 'none', background: 'transparent',
+        fontSize: '13px', color: '#1a1a1a', width: '100%',
+      },
+      right: { display: 'flex', alignItems: 'center', gap: '6px' },
+      navBtn: {
+        display: 'flex', alignItems: 'center', gap: '4px',
+        background: 'none', border: 'none', cursor: 'pointer',
+        fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 10px',
+        whiteSpace: 'nowrap',
+      },
+      createBtn: {
+        display: 'flex', alignItems: 'center', gap: '4px',
+        background: 'none', border: '1.5px solid #1a1a1a', borderRadius: '20px',
+        cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#1a1a1a',
+        padding: '6px 14px', whiteSpace: 'nowrap',
+      },
+      iconBtn: {
+        background: 'none', border: 'none', cursor: 'pointer', color: '#1a1a1a',
+        padding: '6px', display: 'flex', alignItems: 'center',
+      },
+      badge: {
+        position: 'absolute', top: '0', right: '-2px',
+        background: '#e53935', color: '#fff', fontSize: '10px', fontWeight: 700,
+        borderRadius: '10px', padding: '1px 5px', lineHeight: '14px',
+      },
+      avatarGroup: { display: 'flex', gap: '0', marginLeft: '4px' },
+      avatar: {
+        width: '28px', height: '28px', borderRadius: '50%',
+        border: '2px solid #fff', marginLeft: '-6px',
+      },
+    };
+
+    // -----------------------------------------------------------------------
+    // Left Sidebar
+    // -----------------------------------------------------------------------
+    function Sidebar({ activePage }) {
+      const NAV = [
+        { id: 'home', label: 'Home', icon: Icons.home },
+        { id: 'live', label: 'Live now', icon: Icons.live },
+        { id: 'genres', label: 'Genres', icon: Icons.genres },
+        { id: 'trending', label: 'Trending', icon: Icons.trending },
+        { id: 'library', label: 'Library', icon: Icons.library },
+        { id: 'community', label: 'Community', icon: Icons.community },
+      ];
+
+      const LIVE_USERS = [
+        { color: '#d32f2f', label: 'R 303', live: true },
+        { color: '#c8e600', label: '', live: true },
+        { color: '#333', label: '', live: true },
+        { color: '#e8c0a0', label: '', live: false },
+        { color: '#b0d860', label: '', live: false },
+        { color: '#4caf50', label: '', live: false },
+        { color: '#5060ff', label: '', live: false },
+        { color: '#e040a0', label: '', live: false },
+        { color: '#f0d020', label: '', live: false },
+      ];
+
+      return (
+        <nav style={sideS.bar}>
+          <div style={sideS.navItems}>
+            {NAV.map(item => {
+              const active = item.id === activePage;
+              return (
+                <a key={item.id} href="#" style={{
+                  ...sideS.navItem,
+                  color: active ? '#1a1a1a' : '#888',
+                  fontWeight: active ? 600 : 400,
+                }} onClick={(e) => e.preventDefault()}>
+                  <item.icon />
+                  <span style={sideS.navLabel}>{item.label}</span>
+                </a>
+              );
+            })}
+          </div>
+          <div style={sideS.liveSection}>
+            {LIVE_USERS.map((u, i) => (
+              <div key={i} style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ ...sideS.userAvatar, background: u.color }}>
+                  {u.label && <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff' }}>{u.label}</span>}
+                </div>
+                {u.live && <span style={sideS.liveBadge}>LIVE</span>}
+              </div>
+            ))}
+          </div>
+        </nav>
+      );
+    }
+
+    const sideS = {
+      bar: {
+        position: 'fixed', top: '56px', left: 0, bottom: 0, width: '88px',
+        background: '#fff', borderRight: '1px solid #eee', zIndex: 150,
+        display: 'flex', flexDirection: 'column',
+        overflowY: 'auto',
+      },
+      navItems: {
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        paddingTop: '12px', gap: '4px',
+      },
+      navItem: {
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+        textDecoration: 'none', padding: '10px 8px', borderRadius: '8px',
+        fontSize: '11px', cursor: 'pointer', width: '72px', textAlign: 'center',
+        transition: 'background 0.1s',
+      },
+      navLabel: { lineHeight: '1.2' },
+      liveSection: {
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: '8px', paddingTop: '16px', borderTop: '1px solid #eee',
+        marginTop: '8px', paddingBottom: '16px',
+      },
+      userAvatar: {
+        width: '44px', height: '44px', borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      liveBadge: {
+        position: 'absolute', bottom: '-2px',
+        background: '#4caf50', color: '#fff', fontSize: '8px', fontWeight: 700,
+        borderRadius: '4px', padding: '1px 4px', lineHeight: '12px',
+        border: '1.5px solid #fff',
+      },
+    };
+
+    // -----------------------------------------------------------------------
+    // Genre Search Bar (in page content)
+    // -----------------------------------------------------------------------
+    function GenreSearchBar({ genres, onSelect }) {
+      const [query, setQuery] = useState('');
+      const [open, setOpen] = useState(false);
+      const [highlightIdx, setHighlightIdx] = useState(0);
+      const inputRef = useRef(null);
+      const wrapperRef = useRef(null);
+
+      const filtered = useMemo(() => {
+        if (!query.trim()) return [];
+        const q = query.toLowerCase();
+        return genres.filter(g => g.name.toLowerCase().includes(q)).slice(0, 12);
+      }, [genres, query]);
+
+      useEffect(() => { setHighlightIdx(0); }, [filtered]);
+      useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+      }, [open]);
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && filtered[highlightIdx]) { e.preventDefault(); onSelect(filtered[highlightIdx].slug); setQuery(''); setOpen(false); }
+        else if (e.key === 'Escape') { setOpen(false); }
+      };
+
+      return (
+        <div ref={wrapperRef} style={{ position: 'relative', marginBottom: '24px' }}>
+          <div style={searchBarS.bar}>
+            <Icons.search size={18} color="#999" />
+            <input ref={inputRef} value={query}
+              onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => { if (query.trim()) setOpen(true); }}
+              onKeyDown={handleKeyDown}
+              placeholder="Search for a genre or tag" style={searchBarS.input} />
+          </div>
+          {open && filtered.length > 0 && (
+            <div style={searchBarS.dropdown}>
+              {filtered.map((g, i) => (
+                <div key={g.slug}
+                  onClick={() => { onSelect(g.slug); setQuery(''); setOpen(false); }}
+                  onMouseEnter={() => setHighlightIdx(i)}
+                  style={{ ...searchBarS.dropdownItem, ...(i === highlightIdx ? { background: '#f5f5f5' } : {}) }}>
+                  {g.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const searchBarS = {
+      bar: { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff' },
+      input: { flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', color: '#1a1a1a' },
+      dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: '#fff', border: '1px solid #ddd', borderRadius: '8px', maxHeight: '300px', overflowY: 'auto', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.1)' },
+      dropdownItem: { padding: '10px 16px', cursor: 'pointer', fontSize: '14px', color: '#333' },
+    };
+
+    // -----------------------------------------------------------------------
+    // Discovery genre picker (multi-select)
+    // -----------------------------------------------------------------------
+    function GenrePicker({ genres, selectedSlugs, onToggle }) {
+      const [query, setQuery] = useState('');
+      const [open, setOpen] = useState(false);
+      const [highlightIdx, setHighlightIdx] = useState(0);
+      const inputRef = useRef(null);
+      const wrapperRef = useRef(null);
+
+      const selectedGenres = useMemo(() => genres.filter(g => selectedSlugs.includes(g.slug)), [genres, selectedSlugs]);
+      const filtered = useMemo(() => {
+        const pool = genres.filter(g => !selectedSlugs.includes(g.slug));
+        if (!query.trim()) return pool;
+        return pool.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+      }, [genres, query, selectedSlugs]);
+
+      useEffect(() => { setHighlightIdx(0); }, [filtered]);
+      useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+      }, [open]);
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && filtered[highlightIdx]) { e.preventDefault(); onToggle(filtered[highlightIdx].slug); setQuery(''); }
+        else if (e.key === 'Backspace' && query === '' && selectedSlugs.length > 0) { onToggle(selectedSlugs[selectedSlugs.length - 1]); }
+        else if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur(); }
+      };
+
+      return (
+        <div ref={wrapperRef} style={pickS.wrapper}>
+          <div style={pickS.inputArea} onClick={() => inputRef.current?.focus()}>
+            {selectedGenres.map(g => (
+              <span key={g.slug} style={pickS.tag}>
+                {g.name}
+                <button onClick={(e) => { e.stopPropagation(); onToggle(g.slug); }}
+                  style={pickS.tagRemove} aria-label={'Remove ' + g.name}>×</button>
+              </span>
+            ))}
+            <input ref={inputRef} value={query}
+              onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => setOpen(true)} onKeyDown={handleKeyDown}
+              placeholder={selectedSlugs.length === 0 ? 'Search genres...' : 'Add more...'}
+              style={pickS.input} aria-label="Search genres" />
+          </div>
+          {open && filtered.length > 0 && (
+            <div style={pickS.dropdown}>
+              {filtered.slice(0, 20).map((g, i) => (
+                <div key={g.slug}
+                  onClick={() => { onToggle(g.slug); setQuery(''); inputRef.current?.focus(); }}
+                  onMouseEnter={() => setHighlightIdx(i)}
+                  style={{ ...pickS.dropdownItem, ...(i === highlightIdx ? { background: '#f5f5f5' } : {}) }}>
+                  {g.name}
+                </div>
+              ))}
+              {filtered.length > 20 && (
+                <div style={{ padding: '8px 16px', fontSize: '12px', color: '#999', borderTop: '1px solid #eee' }}>
+                  {filtered.length - 20} more — keep typing to narrow down
+                </div>
+              )}
+            </div>
+          )}
+          {open && query.trim() && filtered.length === 0 && (
+            <div style={pickS.dropdown}>
+              <div style={{ padding: '12px 16px', fontSize: '13px', color: '#999' }}>No genres match "{query}"</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const pickS = {
+      wrapper: { position: 'relative', marginBottom: '16px', maxWidth: '500px' },
+      inputArea: {
+        display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center',
+        padding: '8px 12px', borderRadius: '24px', border: '1px solid #ccc',
+        background: '#fff', minHeight: '44px', cursor: 'text',
+      },
+      tag: {
+        display: 'inline-flex', alignItems: 'center', gap: '4px',
+        padding: '4px 10px', borderRadius: '16px',
+        background: '#1a1a1a', color: '#fff', fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap',
+      },
+      tagRemove: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: '16px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 },
+      input: { flex: 1, minWidth: '120px', border: 'none', outline: 'none', background: 'transparent', color: '#1a1a1a', fontSize: '14px', padding: '4px 0' },
+      dropdown: {
+        position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+        background: '#fff', border: '1px solid #ddd', borderRadius: '12px',
+        maxHeight: '280px', overflowY: 'auto', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+      },
+      dropdownItem: { padding: '10px 16px', cursor: 'pointer', fontSize: '14px', color: '#333' },
+    };
+
+    // -----------------------------------------------------------------------
+    // Genres Page
+    // -----------------------------------------------------------------------
+    function GenresPage({ onNavigate }) {
+      const [genres, setGenres] = useState(SEED_DATA.tags);
+      const [loading, setLoading] = useState(false);
+      const [selectedSlugs, setSelectedSlugs] = useState([]);
+      const [discovering, setDiscovering] = useState(false);
+      const [noResults, setNoResults] = useState(false);
+      const [error, setError] = useState(null);
+
+      const topGenres = useMemo(() => TOP_GENRES.map(slug => genres.find(g => g.slug === slug)).filter(Boolean), [genres]);
+
+      const toggleGenre = useCallback((slug) => {
+        setSelectedSlugs(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+        setNoResults(false);
+      }, []);
+
+      const handleGo = useCallback(() => {
+        if (selectedSlugs.length === 0) return;
+        setNoResults(false); setError(null);
+        sessionStorage.setItem('lastGenres', JSON.stringify(selectedSlugs));
+        sessionStorage.setItem('seenShowSlugs', JSON.stringify([]));
+        const result = discoverShow(selectedSlugs, []);
+        if (result) {
+          sessionStorage.setItem('seenShowSlugs', JSON.stringify([result.slug]));
+          onNavigate('show', { username: result.ownerInfo.username, slug: result.slug, name: result.name, displayName: result.ownerInfo.displayName, qualityScore: result.qualityScore, playCount: result.playCount });
+        } else { setNoResults(true); }
+      }, [selectedSlugs, onNavigate]);
+
+      const handleSearchSelect = useCallback((slug) => {
+        setSelectedSlugs(prev => prev.includes(slug) ? prev : [...prev, slug]);
+      }, []);
+
+      if (loading) return <div style={pgS.content}><div style={{ background: '#eee', borderRadius: 4, width: 200, height: 32, animation: 'pulse 1.5s ease infinite' }} /></div>;
+
+      return (
+        <div style={pgS.content}>
+          <h1 style={pgS.title}>Genres &amp; Tags</h1>
+          <GenreSearchBar genres={genres} onSelect={handleSearchSelect} />
+          <div style={pgS.chipGrid}>
+            {topGenres.map(g => (
+              <a key={g.slug} href="#"
+                onClick={(e) => { e.preventDefault(); handleSearchSelect(g.slug); }}
+                style={pgS.chip}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#e8e8e8'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f0f0'; }}>
+                {g.name.toLowerCase()}
+              </a>
+            ))}
+          </div>
+          <hr style={pgS.divider} />
+          <h2 style={pgS.sectionTitle}>or let us find something for you</h2>
+          <p style={pgS.sectionSub}>Choose one or more genres below and we'll find you a show to listen to</p>
+          <GenrePicker genres={genres} selectedSlugs={selectedSlugs} onToggle={toggleGenre} />
+          <button onClick={handleGo}
+            disabled={selectedSlugs.length === 0 || discovering}
+            style={{ ...pgS.goButton, ...(selectedSlugs.length === 0 || discovering ? pgS.goButtonDisabled : {}) }}>
+            {discovering ? 'Finding...' : 'Go'}
+          </button>
+          {error && <p style={{ color: '#d32f2f', fontSize: 14, marginTop: 12 }}>{error}</p>}
+          {noResults && <p style={{ color: '#999', fontSize: 14, marginTop: 12 }}>No shows found for that combination. Try fewer genres or different ones.</p>}
+        </div>
+      );
+    }
+
+    const pgS = {
+      content: { padding: '32px 40px', maxWidth: '960px' },
+      title: { fontSize: '28px', fontWeight: 700, color: '#1a1a1a', marginBottom: '24px' },
+      chipGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+      chip: { display: 'inline-block', padding: '8px 18px', borderRadius: '20px', background: '#f0f0f0', color: '#1a1a1a', fontSize: '14px', textDecoration: 'none', transition: 'background 0.15s', whiteSpace: 'nowrap' },
+      divider: { border: 'none', borderTop: '1px solid #e5e5e5', margin: '36px 0' },
+      sectionTitle: { fontSize: '22px', fontWeight: 600, color: '#1a1a1a', marginBottom: '6px' },
+      sectionSub: { fontSize: '14px', color: '#888', marginBottom: '20px' },
+      goButton: { padding: '10px 28px', borderRadius: '6px', border: 'none', background: '#1a1a1a', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer' },
+      goButtonDisabled: { opacity: 0.3, cursor: 'not-allowed' },
+    };
+
+    // -----------------------------------------------------------------------
+    // Fake waveform generator
+    // -----------------------------------------------------------------------
+    function Waveform() {
+      const bars = useMemo(() => {
+        const b = [];
+        for (let i = 0; i < 200; i++) {
+          const h = 8 + Math.random() * 52 + Math.sin(i * 0.08) * 15 + Math.sin(i * 0.03) * 10;
+          b.push(Math.max(6, Math.min(65, h)));
+        }
+        return b;
+      }, []);
+      return (
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5px', height: '70px', width: '100%' }}>
+          {bars.map((h, i) => (
+            <div key={i} style={{
+              flex: 1, height: h + '%', minWidth: '2px',
+              background: i < 140 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.25)',
+              borderRadius: '1px',
+            }} />
+          ))}
+        </div>
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // Show Page (Mixcloud-style)
+    // -----------------------------------------------------------------------
+    function ShowPage({ show, onNavigate }) {
+      const [rerolling, setRerolling] = useState(false);
+      const savedGenres = JSON.parse(sessionStorage.getItem('lastGenres') || '[]');
+      const savedGenreNames = useMemo(() => {
+        try { return JSON.parse(sessionStorage.getItem('lastGenreNames') || '[]'); }
+        catch { return savedGenres; }
+      }, []);
+
+      const handleReroll = useCallback(() => {
+        if (savedGenres.length === 0) return;
+        const seenSlugs = JSON.parse(sessionStorage.getItem('seenShowSlugs') || '[]');
+        const result = discoverShow(savedGenres, seenSlugs);
+        if (result) {
+          const updated = [...seenSlugs, result.slug];
+          sessionStorage.setItem('seenShowSlugs', JSON.stringify(updated));
+          onNavigate('show', { username: result.ownerInfo.username, slug: result.slug, name: result.name, displayName: result.ownerInfo.displayName, qualityScore: result.qualityScore, playCount: result.playCount });
+        }
+      }, [savedGenres, onNavigate]);
+
+      const plays = show.playCount ? Number(show.playCount).toLocaleString() : '0';
+      const quality = show.qualityScore ? (show.qualityScore).toFixed(2) : '0.00';
+      const fakeMinutes = show.playCount ? Math.round(show.playCount * 2.1) : 5000;
+      const fakeFavs = Math.max(1, Math.round((show.playCount || 100) * 0.003));
+      const duration = Math.floor(30 + Math.random() * 60) + ':' + String(Math.floor(Math.random() * 60)).padStart(2, '0');
+
+      return (
+        <div>
+          {/* Hero section — dark bg with show info + artwork */}
+          <div style={sp.hero}>
+            <div style={sp.heroInner}>
+              <div style={sp.heroLeft}>
+                {/* Play button */}
+                <div style={sp.playBtn}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="#1a1a1a"><polygon points="5,3 19,12 5,21" /></svg>
+                </div>
+                {/* Title & stats */}
+                <div style={{ flex: 1 }}>
+                  <h1 style={sp.heroTitle}>{show.name}</h1>
+                  <p style={sp.heroStats}>
+                    <span>▶ {fakeMinutes.toLocaleString()} mins played</span>
+                    <span style={sp.dot}>•</span>
+                    <span>♥ {fakeFavs} favorites</span>
+                    <span style={sp.dot}>•</span>
+                    <span>↻ 1 repost</span>
+                    <span style={sp.dot}>•</span>
+                    <span>3 years ago</span>
+                    <span style={{ color: '#666', marginLeft: '12px' }}>[{quality}] • 320 • {plays}</span>
+                  </p>
+                </div>
+              </div>
+              {/* Album art */}
+              <div style={sp.artworkWrap}>
+                <div style={sp.artwork}>
+                  <span style={{ fontSize: 64, color: 'rgba(0,0,0,0.15)' }}>♫</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={sp.actions}>
+              {[
+                { icon: '♡', label: 'Favorite' },
+                { icon: '↻', label: 'Repost' },
+                { icon: '↗', label: 'Share' },
+                { icon: '⊕', label: 'Add to' },
+              ].map(a => (
+                <button key={a.label} style={sp.actionBtn}>
+                  <span style={{ fontSize: '16px' }}>{a.icon}</span> {a.label}
+                </button>
+              ))}
+              <button style={sp.moreBtn}>⋯</button>
+            </div>
+
+            {/* Waveform */}
+            <div style={sp.waveformWrap}>
+              <Waveform />
+              <span style={sp.duration}>{duration}</span>
+            </div>
+
+            {/* Comment bar */}
+            <div style={sp.commentBar}>
+              <div style={sp.commentAvatar}>M→X</div>
+              <span style={{ color: '#999', fontSize: '14px', flex: 1 }}>Write a comment</span>
+              <span style={{ color: '#666', fontSize: '18px', display: 'flex', gap: '12px' }}>
+                <span>☺</span><span>▷</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Creator section */}
+          <div style={sp.creatorSection}>
+            <div style={sp.creatorLeft}>
+              <div style={sp.creatorAvatar}>
+                <span style={{ fontSize: '24px', color: '#999' }}>♫</span>
+              </div>
+              <div>
+                <p style={sp.creatorName}>{show.displayName || show.username}</p>
+                <p style={sp.creatorFollowers}>{Math.floor(100 + Math.random() * 900)} followers</p>
+              </div>
+            </div>
+            <button style={sp.followingBtn}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+              Following
+              <Icons.chevron />
+            </button>
+          </div>
+
+          {/* Tags + sidebar */}
+          <div style={sp.belowCreator}>
+            <div style={sp.mainCol}>
+              {/* Genre tags */}
+              <div style={sp.tagRow}>
+                {savedGenres.map(slug => (
+                  <span key={slug} style={sp.tagChip}>{slug.replace(/-/g, ' ')}</span>
+                ))}
+                {savedGenres.length === 0 && <span style={sp.tagChip}>mixed</span>}
+              </div>
+
+              {/* Description */}
+              <p style={{ fontSize: '14px', color: '#666', marginTop: '16px' }}>Enjoy!</p>
+
+              {/* Discovery buttons */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+                {savedGenres.length > 0 && (
+                  <button onClick={handleReroll} disabled={rerolling}
+                    style={{ ...sp.discoverBtn, ...(rerolling ? { opacity: 0.5 } : {}) }}>
+                    {rerolling ? 'Finding...' : 'Discover another'}
+                  </button>
+                )}
+                <button onClick={() => onNavigate('home')} style={sp.backBtn}>Back to genres</button>
+              </div>
+            </div>
+
+            {/* Listeners sidebar */}
+            <div style={sp.sideCol}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>Listeners ({Math.max(1, Math.floor((show.playCount || 50) * 0.026))})</span>
+                <a href="#" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none' }}>See all</a>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} style={{
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: ['#e8a0c0','#607080','#90b060','#c0a070','#6080c0','#d06060','#50a0a0'][i],
+                  }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', marginBottom: '12px' }}>
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>Favorited by ({fakeFavs})</span>
+                <a href="#" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none' }}>See all</a>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: ['#a080d0','#d0a050','#50b0a0','#c07070','#7090c0'][i],
+                  }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const sp = {
+      hero: { background: '#1a1a1a', padding: '0' },
+      heroInner: {
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        padding: '40px 40px 24px', gap: '24px',
+      },
+      heroLeft: { display: 'flex', alignItems: 'flex-start', gap: '20px', flex: 1 },
+      playBtn: {
+        width: '72px', height: '72px', borderRadius: '50%', background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', flexShrink: 0, paddingLeft: '4px',
+      },
+      heroTitle: { fontSize: '24px', fontWeight: 700, color: '#fff', margin: '0 0 8px', lineHeight: 1.2 },
+      heroStats: { fontSize: '13px', color: '#ccc', display: 'flex', flexWrap: 'wrap', gap: '0', alignItems: 'center' },
+      dot: { margin: '0 8px', color: '#666' },
+      artworkWrap: { flexShrink: 0 },
+      artwork: {
+        width: '200px', height: '200px', borderRadius: '4px', background: '#f0f0f0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      actions: {
+        display: 'flex', gap: '8px', padding: '0 40px 24px',
+        alignItems: 'center',
+      },
+      actionBtn: {
+        display: 'flex', alignItems: 'center', gap: '6px',
+        padding: '8px 18px', borderRadius: '24px', border: '1px solid #444',
+        background: 'transparent', color: '#fff', fontSize: '13px', fontWeight: 500,
+        cursor: 'pointer', whiteSpace: 'nowrap',
+      },
+      moreBtn: {
+        width: '38px', height: '38px', borderRadius: '50%', border: '1px solid #444',
+        background: 'transparent', color: '#fff', fontSize: '18px',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      waveformWrap: {
+        position: 'relative', padding: '0 40px 8px', background: '#1a1a1a',
+      },
+      duration: {
+        position: 'absolute', bottom: '12px', right: '44px',
+        color: '#999', fontSize: '12px',
+      },
+      commentBar: {
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '12px 40px', background: '#2a2a2a',
+      },
+      commentAvatar: {
+        width: '32px', height: '32px', borderRadius: '50%', background: '#f0f0f0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '8px', fontWeight: 800, color: '#1a1a1a', flexShrink: 0,
+      },
+      creatorSection: {
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '20px 40px', background: '#f5f5f5', borderBottom: '1px solid #eee',
+      },
+      creatorLeft: { display: 'flex', alignItems: 'center', gap: '14px' },
+      creatorAvatar: {
+        width: '52px', height: '52px', borderRadius: '50%', background: '#e0e0e0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      creatorName: { fontSize: '16px', fontWeight: 700, color: '#1a1a1a', margin: 0 },
+      creatorFollowers: { fontSize: '13px', color: '#999', margin: '2px 0 0' },
+      followingBtn: {
+        display: 'flex', alignItems: 'center', gap: '6px',
+        padding: '8px 18px', borderRadius: '6px', border: '1px solid #ddd',
+        background: '#fff', color: '#1a1a1a', fontSize: '13px', fontWeight: 600,
+        cursor: 'pointer',
+      },
+      belowCreator: {
+        display: 'flex', gap: '40px', padding: '28px 40px',
+      },
+      mainCol: { flex: 1 },
+      sideCol: { width: '280px', flexShrink: 0 },
+      tagRow: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+      tagChip: {
+        display: 'inline-block', padding: '6px 16px', borderRadius: '20px',
+        border: '1px solid #ddd', background: '#fff', color: '#1a1a1a',
+        fontSize: '13px', textTransform: 'capitalize',
+      },
+      discoverBtn: {
+        padding: '10px 24px', borderRadius: '6px', border: 'none',
+        background: '#1a1a1a', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+      },
+      backBtn: {
+        padding: '10px 24px', borderRadius: '6px', border: '1px solid #ddd',
+        background: '#fff', color: '#1a1a1a', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+      },
+    };
+
+    // -----------------------------------------------------------------------
+    // App (with shell)
+    // -----------------------------------------------------------------------
+    function App() {
+      const [page, setPage] = useState('home');
+      const [showData, setShowData] = useState(null);
+
+      const handleNavigate = useCallback((target, data) => {
+        if (target === 'show') { setShowData(data); setPage('show'); }
+        else { setPage('home'); }
+        window.scrollTo(0, 0);
+      }, []);
+
+      const showSidebar = page === 'home';
+
+      return (
+        <div style={{ minHeight: '100vh' }}>
+          <TopHeader />
+          {showSidebar && <Sidebar activePage="genres" />}
+          <div style={{ marginLeft: showSidebar ? '88px' : '0', marginTop: '56px' }}>
+            {page === 'home' && <GenresPage onNavigate={handleNavigate} />}
+            {page === 'show' && showData && <ShowPage show={showData} onNavigate={handleNavigate} key={showData.slug} />}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

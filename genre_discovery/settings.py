@@ -24,13 +24,18 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
+
+try:
+    import whitenoise  # noqa: F401
+    MIDDLEWARE.insert(2, 'whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass
 
 ROOT_URLCONF = 'genre_discovery.urls'
 
@@ -65,10 +70,15 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STORAGES = {
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
+
+try:
+    import whitenoise  # noqa: F401
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+except ImportError:
+    pass
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

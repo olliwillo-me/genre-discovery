@@ -23,6 +23,7 @@ class UserType(graphene.ObjectType):
 class CloudcastType(DjangoObjectType):
     owner_info = graphene.Field(UserType)
     picture_url = graphene.String()
+    tag_list = graphene.List(TagType)
 
     class Meta:
         model = Cloudcast
@@ -36,6 +37,9 @@ class CloudcastType(DjangoObjectType):
 
     def resolve_picture_url(self, info):
         return self.picture_url
+
+    def resolve_tag_list(self, info):
+        return self.tags.filter(tag_type='genre')
 
 
 def discover_show(genre_slugs, user=None, exclude_slugs=None):
@@ -74,6 +78,33 @@ def discover_show(genre_slugs, user=None, exclude_slugs=None):
     return base_qs.first()
 
 
+def discover_shows(genre_slugs, limit=20):
+    one_year_ago = timezone.now() - timedelta(days=365)
+
+    base_qs = (
+        Cloudcast.objects
+        .filter(
+            tags__slug__in=genre_slugs,
+            tags__tag_type='genre',
+        )
+        .filter(quality_score__gte=0.5)
+        .filter(publish_date__gte=one_year_ago)
+        .filter(is_public=True)
+    )
+
+    base_qs = base_qs.annotate(
+        genre_match_count=Count(
+            'tags',
+            filter=Q(tags__slug__in=genre_slugs, tags__tag_type='genre'),
+            distinct=True,
+        )
+    ).distinct()
+
+    base_qs = base_qs.order_by('-genre_match_count', '-play_count')
+
+    return base_qs[:limit]
+
+
 class Query(graphene.ObjectType):
     tags = graphene.List(
         TagType,
@@ -87,6 +118,14 @@ class Query(graphene.ObjectType):
             required=True,
         ),
         exclude_slugs=graphene.List(graphene.NonNull(graphene.String)),
+    )
+    discover_shows = graphene.List(
+        CloudcastType,
+        genre_slugs=graphene.List(
+            graphene.NonNull(graphene.String),
+            required=True,
+        ),
+        limit=graphene.Int(),
     )
 
     def resolve_tags(self, info, tag_type=None, first=None):
@@ -103,3 +142,8 @@ class Query(graphene.ObjectType):
             return None
         user = info.context.user if hasattr(info.context, 'user') else None
         return discover_show(genre_slugs, user=user, exclude_slugs=exclude_slugs)
+
+    def resolve_discover_shows(self, info, genre_slugs, limit=20):
+        if not genre_slugs:
+            return []
+        return discover_shows(genre_slugs, limit=limit)

@@ -48,12 +48,13 @@
       }
     `;
 
-    const DISCOVER_SHOW_QUERY = `
-      query DiscoverShow($genreSlugs: [String!]!, $excludeSlugs: [String!]) {
-        discoverShow(genreSlugs: $genreSlugs, excludeSlugs: $excludeSlugs) {
+    const DISCOVER_SHOWS_QUERY = `
+      query DiscoverShows($genreSlugs: [String!]!, $limit: Int) {
+        discoverShows(genreSlugs: $genreSlugs, limit: $limit) {
           id slug name
           ownerInfo { username displayName }
-          qualityScore playCount
+          qualityScore playCount publishDate
+          tagList { name slug }
         }
       }
     `;
@@ -446,14 +447,12 @@
         if (selectedSlugs.length === 0) return;
         setDiscovering(true); setNoResults(false); setError(null);
         sessionStorage.setItem('lastGenres', JSON.stringify(selectedSlugs));
-        sessionStorage.setItem('seenShowSlugs', JSON.stringify([]));
-        gqlQuery(DISCOVER_SHOW_QUERY, { genreSlugs: selectedSlugs })
+        gqlQuery(DISCOVER_SHOWS_QUERY, { genreSlugs: selectedSlugs, limit: 20 })
           .then(data => {
             setDiscovering(false);
-            if (data.discoverShow) {
-              const s = data.discoverShow;
-              sessionStorage.setItem('seenShowSlugs', JSON.stringify([s.slug]));
-              onNavigate('show', { username: s.ownerInfo.username, slug: s.slug, name: s.name, displayName: s.ownerInfo.displayName, qualityScore: s.qualityScore, playCount: s.playCount });
+            const shows = data.discoverShows || [];
+            if (shows.length > 0) {
+              onNavigate('results', { shows, genreSlugs: selectedSlugs });
             } else { setNoResults(true); }
           })
           .catch(() => { setDiscovering(false); setError('Something went wrong.'); });
@@ -508,24 +507,24 @@
     };
 
     // -----------------------------------------------------------------------
-    // Fake waveform generator
+    // Mini waveform for feed cards
     // -----------------------------------------------------------------------
-    function Waveform() {
+    function MiniWaveform({ color = '#ccc' }) {
       const bars = useMemo(() => {
         const b = [];
-        for (let i = 0; i < 200; i++) {
-          const h = 8 + Math.random() * 52 + Math.sin(i * 0.08) * 15 + Math.sin(i * 0.03) * 10;
-          b.push(Math.max(6, Math.min(65, h)));
+        for (let i = 0; i < 120; i++) {
+          const h = 10 + Math.random() * 50 + Math.sin(i * 0.1) * 15 + Math.sin(i * 0.04) * 10;
+          b.push(Math.max(8, Math.min(70, h)));
         }
         return b;
       }, []);
       return (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5px', height: '70px', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1px', height: '40px', width: '100%' }}>
           {bars.map((h, i) => (
             <div key={i} style={{
-              flex: 1, height: h + '%', minWidth: '2px',
-              background: i < 140 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.25)',
-              borderRadius: '1px',
+              flex: 1, height: h + '%', minWidth: '1.5px',
+              background: color,
+              borderRadius: '0.5px',
             }} />
           ))}
         </div>
@@ -533,171 +532,86 @@
     }
 
     // -----------------------------------------------------------------------
-    // Show Page (Mixcloud-style)
+    // Time-ago helper
     // -----------------------------------------------------------------------
-    function ShowPage({ show, onNavigate }) {
-      const [rerolling, setRerolling] = useState(false);
-      const savedGenres = JSON.parse(sessionStorage.getItem('lastGenres') || '[]');
-      const savedGenreNames = useMemo(() => {
-        try { return JSON.parse(sessionStorage.getItem('lastGenreNames') || '[]'); }
-        catch { return savedGenres; }
+    function timeAgo(dateStr) {
+      if (!dateStr) return '';
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60) return mins + ' mins ago';
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
+      const days = Math.floor(hrs / 24);
+      if (days < 30) return days + (days === 1 ? ' day ago' : ' days ago');
+      const months = Math.floor(days / 30);
+      if (months < 12) return months + (months === 1 ? ' month ago' : ' months ago');
+      return Math.floor(months / 12) + ' years ago';
+    }
+
+    // -----------------------------------------------------------------------
+    // Show Feed Card (Mixcloud-style)
+    // -----------------------------------------------------------------------
+    function ShowCard({ show }) {
+      const tags = show.tagList || [];
+      const plays = show.playCount ? Number(show.playCount).toLocaleString() : '0';
+      const duration = useMemo(() => {
+        const m = Math.floor(30 + Math.random() * 90);
+        const s = Math.floor(Math.random() * 60);
+        return (m >= 60 ? Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0');
       }, []);
 
-      const handleReroll = useCallback(() => {
-        if (savedGenres.length === 0) return;
-        setRerolling(true);
-        const seenSlugs = JSON.parse(sessionStorage.getItem('seenShowSlugs') || '[]');
-        gqlQuery(DISCOVER_SHOW_QUERY, { genreSlugs: savedGenres, excludeSlugs: seenSlugs })
-          .then(data => {
-            setRerolling(false);
-            if (data.discoverShow) {
-              const s = data.discoverShow;
-              const updated = [...seenSlugs, s.slug];
-              sessionStorage.setItem('seenShowSlugs', JSON.stringify(updated));
-              onNavigate('show', { username: s.ownerInfo.username, slug: s.slug, name: s.name, displayName: s.ownerInfo.displayName, qualityScore: s.qualityScore, playCount: s.playCount });
-            }
-          }).catch(() => setRerolling(false));
-      }, [savedGenres, onNavigate]);
-
-      const plays = show.playCount ? Number(show.playCount).toLocaleString() : '0';
-      const quality = show.qualityScore ? (show.qualityScore).toFixed(2) : '0.00';
-      const fakeMinutes = show.playCount ? Math.round(show.playCount * 2.1) : 5000;
-      const fakeFavs = Math.max(1, Math.round((show.playCount || 100) * 0.003));
-      const duration = Math.floor(30 + Math.random() * 60) + ':' + String(Math.floor(Math.random() * 60)).padStart(2, '0');
+      // deterministic color from name
+      const hue = useMemo(() => {
+        let h = 0;
+        for (let i = 0; i < (show.name || '').length; i++) h = (h * 31 + show.name.charCodeAt(i)) & 0xffffff;
+        return h % 360;
+      }, [show.name]);
 
       return (
-        <div>
-          {/* Hero section — dark bg with show info + artwork */}
-          <div style={sp.hero}>
-            <div style={sp.heroInner}>
-              <div style={sp.heroLeft}>
-                {/* Play button */}
-                <div style={sp.playBtn}>
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="#1a1a1a"><polygon points="5,3 19,12 5,21" /></svg>
+        <div style={fc.card}>
+          <div style={fc.row}>
+            {/* Album art */}
+            <div style={{ ...fc.artwork, background: 'hsl(' + hue + ', 35%, 75%)' }}>
+              <span style={{ fontSize: '36px', color: 'rgba(255,255,255,0.5)' }}>♫</span>
+              <div style={fc.hqBadge}>HQ</div>
+            </div>
+
+            {/* Main content */}
+            <div style={fc.content}>
+              {/* Play button + creator + title */}
+              <div style={fc.topRow}>
+                <div style={fc.playBtn}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><polygon points="6,3 20,12 6,21" /></svg>
                 </div>
-                {/* Title & stats */}
-                <div style={{ flex: 1 }}>
-                  <h1 style={sp.heroTitle}>{show.name}</h1>
-                  <p style={sp.heroStats}>
-                    <span>▶ {fakeMinutes.toLocaleString()} mins played</span>
-                    <span style={sp.dot}>•</span>
-                    <span>♥ {fakeFavs} favorites</span>
-                    <span style={sp.dot}>•</span>
-                    <span>↻ 1 repost</span>
-                    <span style={sp.dot}>•</span>
-                    <span>3 years ago</span>
-                    <span style={{ color: '#666', marginLeft: '12px' }}>[{quality}] • 320 • {plays}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={fc.creatorLine}>
+                    <span style={fc.creatorName}>{show.ownerInfo?.displayName || show.ownerInfo?.username || 'Unknown'}</span>
+                    <span style={fc.dot}>•</span>
+                    <span style={fc.timeAgo}>{timeAgo(show.publishDate)}</span>
                   </p>
+                  <p style={fc.title}>{show.name}</p>
                 </div>
               </div>
-              {/* Album art */}
-              <div style={sp.artworkWrap}>
-                <div style={sp.artwork}>
-                  <span style={{ fontSize: 64, color: 'rgba(0,0,0,0.15)' }}>♫</span>
+
+              {/* Waveform */}
+              <div style={fc.waveformRow}>
+                <MiniWaveform color="#d0d0d0" />
+                <span style={fc.duration}>{duration}</span>
+              </div>
+
+              {/* Actions + tags */}
+              <div style={fc.bottomRow}>
+                <div style={fc.actions}>
+                  <button style={fc.actionBtn}>♡ Favorite</button>
+                  <button style={fc.actionBtn}>↗ Share</button>
+                  <button style={fc.actionBtn}>⊕ Add To</button>
+                  <span style={fc.playCount}>▷ {plays}</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div style={sp.actions}>
-              {[
-                { icon: '♡', label: 'Favorite' },
-                { icon: '↻', label: 'Repost' },
-                { icon: '↗', label: 'Share' },
-                { icon: '⊕', label: 'Add to' },
-              ].map(a => (
-                <button key={a.label} style={sp.actionBtn}>
-                  <span style={{ fontSize: '16px' }}>{a.icon}</span> {a.label}
-                </button>
-              ))}
-              <button style={sp.moreBtn}>⋯</button>
-            </div>
-
-            {/* Waveform */}
-            <div style={sp.waveformWrap}>
-              <Waveform />
-              <span style={sp.duration}>{duration}</span>
-            </div>
-
-            {/* Comment bar */}
-            <div style={sp.commentBar}>
-              <div style={sp.commentAvatar}>M→X</div>
-              <span style={{ color: '#999', fontSize: '14px', flex: 1 }}>Write a comment</span>
-              <span style={{ color: '#666', fontSize: '18px', display: 'flex', gap: '12px' }}>
-                <span>☺</span><span>▷</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Creator section */}
-          <div style={sp.creatorSection}>
-            <div style={sp.creatorLeft}>
-              <div style={sp.creatorAvatar}>
-                <span style={{ fontSize: '24px', color: '#999' }}>♫</span>
-              </div>
-              <div>
-                <p style={sp.creatorName}>{show.displayName || show.username}</p>
-                <p style={sp.creatorFollowers}>{Math.floor(100 + Math.random() * 900)} followers</p>
-              </div>
-            </div>
-            <button style={sp.followingBtn}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
-              Following
-              <Icons.chevron />
-            </button>
-          </div>
-
-          {/* Tags + sidebar */}
-          <div style={sp.belowCreator}>
-            <div style={sp.mainCol}>
-              {/* Genre tags */}
-              <div style={sp.tagRow}>
-                {savedGenres.map(slug => (
-                  <span key={slug} style={sp.tagChip}>{slug.replace(/-/g, ' ')}</span>
-                ))}
-                {savedGenres.length === 0 && <span style={sp.tagChip}>mixed</span>}
-              </div>
-
-              {/* Description */}
-              <p style={{ fontSize: '14px', color: '#666', marginTop: '16px' }}>Enjoy!</p>
-
-              {/* Discovery buttons */}
-              <div style={{ display: 'flex', gap: '10px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
-                {savedGenres.length > 0 && (
-                  <button onClick={handleReroll} disabled={rerolling}
-                    style={{ ...sp.discoverBtn, ...(rerolling ? { opacity: 0.5 } : {}) }}>
-                    {rerolling ? 'Finding...' : 'Discover another'}
-                  </button>
-                )}
-                <button onClick={() => onNavigate('home')} style={sp.backBtn}>Back to genres</button>
-              </div>
-            </div>
-
-            {/* Listeners sidebar */}
-            <div style={sp.sideCol}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ fontWeight: 600, fontSize: '14px' }}>Listeners ({Math.max(1, Math.floor((show.playCount || 50) * 0.026))})</span>
-                <a href="#" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none' }}>See all</a>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} style={{
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: ['#e8a0c0','#607080','#90b060','#c0a070','#6080c0','#d06060','#50a0a0'][i],
-                  }} />
-                ))}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', marginBottom: '12px' }}>
-                <span style={{ fontWeight: 600, fontSize: '14px' }}>Favorited by ({fakeFavs})</span>
-                <a href="#" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none' }}>See all</a>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} style={{
-                    width: '44px', height: '44px', borderRadius: '50%',
-                    background: ['#a080d0','#d0a050','#50b0a0','#c07070','#7090c0'][i],
-                  }} />
-                ))}
+                <div style={fc.tags}>
+                  {tags.map(t => (
+                    <span key={t.slug} style={fc.tagChip}>{t.name.toLowerCase()}</span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -705,93 +619,94 @@
       );
     }
 
-    const sp = {
-      hero: { background: '#1a1a1a', padding: '0' },
-      heroInner: {
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        padding: '40px 40px 24px', gap: '24px',
-      },
-      heroLeft: { display: 'flex', alignItems: 'flex-start', gap: '20px', flex: 1 },
-      playBtn: {
-        width: '72px', height: '72px', borderRadius: '50%', background: '#fff',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', flexShrink: 0, paddingLeft: '4px',
-      },
-      heroTitle: { fontSize: '24px', fontWeight: 700, color: '#fff', margin: '0 0 8px', lineHeight: 1.2 },
-      heroStats: { fontSize: '13px', color: '#ccc', display: 'flex', flexWrap: 'wrap', gap: '0', alignItems: 'center' },
-      dot: { margin: '0 8px', color: '#666' },
-      artworkWrap: { flexShrink: 0 },
+    const fc = {
+      card: { borderBottom: '1px solid #eee', padding: '24px 0' },
+      row: { display: 'flex', gap: '20px' },
       artwork: {
-        width: '200px', height: '200px', borderRadius: '4px', background: '#f0f0f0',
+        width: '160px', height: '160px', borderRadius: '4px', flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative',
       },
-      actions: {
-        display: 'flex', gap: '8px', padding: '0 40px 24px',
-        alignItems: 'center',
+      hqBadge: {
+        position: 'absolute', top: '8px', right: '8px',
+        background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: '10px', fontWeight: 700,
+        padding: '2px 6px', borderRadius: '3px',
       },
+      content: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minWidth: 0 },
+      topRow: { display: 'flex', alignItems: 'flex-start', gap: '14px' },
+      playBtn: {
+        width: '44px', height: '44px', borderRadius: '50%', background: '#7b2ff2',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', flexShrink: 0, paddingLeft: '2px',
+      },
+      creatorLine: { fontSize: '13px', color: '#666', margin: '0 0 4px', display: 'flex', alignItems: 'center', gap: '0' },
+      creatorName: { fontWeight: 600, color: '#1a1a1a' },
+      dot: { margin: '0 6px', color: '#ccc' },
+      timeAgo: { color: '#999' },
+      title: { fontSize: '16px', fontWeight: 600, color: '#1a1a1a', margin: 0, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+      waveformRow: { position: 'relative', margin: '10px 0 6px' },
+      duration: { position: 'absolute', top: '50%', right: '0', transform: 'translateY(-50%)', color: '#999', fontSize: '12px', background: '#fff', paddingLeft: '8px' },
+      bottomRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+      actions: { display: 'flex', gap: '12px', alignItems: 'center' },
       actionBtn: {
-        display: 'flex', alignItems: 'center', gap: '6px',
-        padding: '8px 18px', borderRadius: '24px', border: '1px solid #444',
-        background: 'transparent', color: '#fff', fontSize: '13px', fontWeight: 500,
-        cursor: 'pointer', whiteSpace: 'nowrap',
+        background: 'none', border: '1px solid #e0e0e0', borderRadius: '20px',
+        padding: '5px 14px', fontSize: '12px', color: '#555', cursor: 'pointer',
+        whiteSpace: 'nowrap',
       },
-      moreBtn: {
-        width: '38px', height: '38px', borderRadius: '50%', border: '1px solid #444',
-        background: 'transparent', color: '#fff', fontSize: '18px',
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      },
-      waveformWrap: {
-        position: 'relative', padding: '0 40px 8px', background: '#1a1a1a',
-      },
-      duration: {
-        position: 'absolute', bottom: '12px', right: '44px',
-        color: '#999', fontSize: '12px',
-      },
-      commentBar: {
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '12px 40px', background: '#2a2a2a',
-      },
-      commentAvatar: {
-        width: '32px', height: '32px', borderRadius: '50%', background: '#f0f0f0',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '8px', fontWeight: 800, color: '#1a1a1a', flexShrink: 0,
-      },
-      creatorSection: {
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '20px 40px', background: '#f5f5f5', borderBottom: '1px solid #eee',
-      },
-      creatorLeft: { display: 'flex', alignItems: 'center', gap: '14px' },
-      creatorAvatar: {
-        width: '52px', height: '52px', borderRadius: '50%', background: '#e0e0e0',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      },
-      creatorName: { fontSize: '16px', fontWeight: 700, color: '#1a1a1a', margin: 0 },
-      creatorFollowers: { fontSize: '13px', color: '#999', margin: '2px 0 0' },
-      followingBtn: {
-        display: 'flex', alignItems: 'center', gap: '6px',
-        padding: '8px 18px', borderRadius: '6px', border: '1px solid #ddd',
-        background: '#fff', color: '#1a1a1a', fontSize: '13px', fontWeight: 600,
-        cursor: 'pointer',
-      },
-      belowCreator: {
-        display: 'flex', gap: '40px', padding: '28px 40px',
-      },
-      mainCol: { flex: 1 },
-      sideCol: { width: '280px', flexShrink: 0 },
-      tagRow: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+      playCount: { fontSize: '12px', color: '#999' },
+      tags: { display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' },
       tagChip: {
-        display: 'inline-block', padding: '6px 16px', borderRadius: '20px',
-        border: '1px solid #ddd', background: '#fff', color: '#1a1a1a',
-        fontSize: '13px', textTransform: 'capitalize',
+        display: 'inline-block', padding: '4px 12px', borderRadius: '14px',
+        border: '1px solid #e0e0e0', background: '#fff', color: '#555',
+        fontSize: '12px', whiteSpace: 'nowrap',
       },
-      discoverBtn: {
-        padding: '10px 24px', borderRadius: '6px', border: 'none',
-        background: '#1a1a1a', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+    };
+
+    // -----------------------------------------------------------------------
+    // Results Page (feed of shows)
+    // -----------------------------------------------------------------------
+    function ResultsPage({ results, genreSlugs, onNavigate }) {
+      return (
+        <div style={rp.content}>
+          <div style={rp.header}>
+            <div style={rp.playIcon}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#7b2ff2"><polygon points="5,3 19,12 5,21" /></svg>
+            </div>
+            <h1 style={rp.title}>Discover</h1>
+          </div>
+          <div style={rp.tabRow}>
+            <span style={rp.tabActive}>Results</span>
+            <button onClick={() => onNavigate('home')} style={rp.tabInactive}>Back to genres</button>
+          </div>
+          <p style={rp.subtitle}>{results.length} show{results.length !== 1 ? 's' : ''} matching your genres</p>
+          <div>
+            {results.map(show => (
+              <ShowCard key={show.id} show={show} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    const rp = {
+      content: { padding: '32px 40px', maxWidth: '960px' },
+      header: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' },
+      playIcon: {
+        width: '40px', height: '40px', borderRadius: '50%', background: '#f3ecff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', paddingLeft: '2px',
       },
-      backBtn: {
-        padding: '10px 24px', borderRadius: '6px', border: '1px solid #ddd',
-        background: '#fff', color: '#1a1a1a', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+      title: { fontSize: '28px', fontWeight: 700, color: '#1a1a1a', margin: 0 },
+      tabRow: { display: 'flex', gap: '8px', marginBottom: '16px' },
+      tabActive: {
+        display: 'inline-block', padding: '8px 20px', borderRadius: '20px',
+        background: '#1a1a1a', color: '#fff', fontSize: '14px', fontWeight: 500,
       },
+      tabInactive: {
+        display: 'inline-block', padding: '8px 20px', borderRadius: '20px',
+        background: '#f0f0f0', color: '#1a1a1a', fontSize: '14px', fontWeight: 500,
+        border: 'none', cursor: 'pointer',
+      },
+      subtitle: { fontSize: '14px', color: '#999', marginBottom: '8px' },
     };
 
     // -----------------------------------------------------------------------
@@ -799,23 +714,27 @@
     // -----------------------------------------------------------------------
     function App() {
       const [page, setPage] = useState('home');
-      const [showData, setShowData] = useState(null);
+      const [resultsData, setResultsData] = useState(null);
 
       const handleNavigate = useCallback((target, data) => {
-        if (target === 'show') { setShowData(data); setPage('show'); }
+        if (target === 'results') { setResultsData(data); setPage('results'); }
         else { setPage('home'); }
         window.scrollTo(0, 0);
       }, []);
 
-      const showSidebar = page === 'home';
-
       return (
         <div style={{ minHeight: '100vh' }}>
           <TopHeader />
-          {showSidebar && <Sidebar activePage="genres" />}
-          <div style={{ marginLeft: showSidebar ? '88px' : '0', marginTop: '56px' }}>
+          <Sidebar activePage={page === 'home' ? 'genres' : 'home'} />
+          <div style={{ marginLeft: '88px', marginTop: '56px' }}>
             {page === 'home' && <GenresPage onNavigate={handleNavigate} />}
-            {page === 'show' && showData && <ShowPage show={showData} onNavigate={handleNavigate} key={showData.slug} />}
+            {page === 'results' && resultsData && (
+              <ResultsPage
+                results={resultsData.shows}
+                genreSlugs={resultsData.genreSlugs}
+                onNavigate={handleNavigate}
+              />
+            )}
           </div>
         </div>
       );

@@ -1,0 +1,829 @@
+{% verbatim %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Genres &amp; Tags</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #fff;
+      color: #1a1a1a;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    #root { min-height: 100vh; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.15; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useCallback, useEffect, useRef, useMemo } = React;
+
+    async function gqlQuery(query, variables = {}) {
+      const resp = await fetch('/graphql/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+      });
+      const json = await resp.json();
+      if (json.errors) throw new Error(json.errors[0].message);
+      return json.data;
+    }
+
+    const GENRE_LIST_QUERY = `
+      query GenreList {
+        tags(tagType: "genre", first: 500) { id name slug }
+      }
+    `;
+
+    const DISCOVER_SHOW_QUERY = `
+      query DiscoverShow($genreSlugs: [String!]!, $excludeSlugs: [String!]) {
+        discoverShow(genreSlugs: $genreSlugs, excludeSlugs: $excludeSlugs) {
+          id slug name
+          ownerInfo { username displayName }
+          qualityScore playCount
+        }
+      }
+    `;
+
+    const TOP_GENRES = [
+      'afrobeats','ambient','bass-club-music','blues','chillout',
+      'classical','country','dancehall','disco','drum-and-bass',
+      'dub','dubstep','edm','folk','funk','garage-ukg','hardcore',
+      'hip-hop','house','jazz','jungle','metal','pop','punk',
+      'rb','reggae','reggaeton','rock','soul','techno','trance',
+    ];
+
+    // -----------------------------------------------------------------------
+    // SVG Icons
+    // -----------------------------------------------------------------------
+    const Icons = {
+      search: (props) => <svg width={props.size||18} height={props.size||18} viewBox="0 0 24 24" fill="none" stroke={props.color||"#999"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+      home: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+      live: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.93 19.07A10 10 0 0119.07 4.93"/><path d="M7.76 16.24a6 6 0 018.49-8.49"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>,
+      genres: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+      trending: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+      library: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="6" x2="4" y2="18"/><line x1="9" y1="4" x2="9" y2="20"/><line x1="14" y1="6" x2="14" y2="18"/><line x1="19" y1="8" x2="19" y2="16"/></svg>,
+      community: () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
+      bell: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>,
+      mail: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+      plus: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+      menu: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
+      chevron: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+    };
+
+    // -----------------------------------------------------------------------
+    // Top Header Bar
+    // -----------------------------------------------------------------------
+    function TopHeader() {
+      return (
+        <header style={headerS.bar}>
+          <div style={headerS.left}>
+            <a href="#" style={headerS.logo}>M→XCLOUD</a>
+            <div style={headerS.searchWrap}>
+              <Icons.search size={16} color="#999" />
+              <input placeholder="Search" style={headerS.searchInput} />
+            </div>
+          </div>
+          <div style={headerS.right}>
+            <button style={headerS.navBtn}>Listen <Icons.chevron /></button>
+            <button style={headerS.navBtn}>Creator tools <Icons.chevron /></button>
+            <button style={headerS.navBtn}>Plans <Icons.chevron /></button>
+            <button style={headerS.createBtn}><Icons.plus /> Create</button>
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <button style={headerS.iconBtn}><Icons.bell /></button>
+              <span style={headerS.badge}>6</span>
+            </div>
+            <button style={headerS.iconBtn}><Icons.mail /></button>
+            <div style={headerS.avatarGroup}>
+              <div style={{ ...headerS.avatar, background: '#e8a030' }} />
+              <div style={{ ...headerS.avatar, background: '#c050e0' }} />
+            </div>
+            <button style={headerS.iconBtn}><Icons.menu /></button>
+          </div>
+        </header>
+      );
+    }
+
+    const headerS = {
+      bar: {
+        position: 'fixed', top: 0, left: 0, right: 0, height: '56px', zIndex: 200,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 20px', background: '#fff', borderBottom: '1px solid #eee',
+      },
+      left: { display: 'flex', alignItems: 'center', gap: '16px' },
+      logo: {
+        fontWeight: 800, fontSize: '18px', color: '#1a1a1a', textDecoration: 'none',
+        letterSpacing: '-0.5px', whiteSpace: 'nowrap',
+      },
+      searchWrap: {
+        display: 'flex', alignItems: 'center', gap: '8px',
+        background: '#f5f5f5', borderRadius: '6px', padding: '7px 14px',
+        width: '200px',
+      },
+      searchInput: {
+        border: 'none', outline: 'none', background: 'transparent',
+        fontSize: '13px', color: '#1a1a1a', width: '100%',
+      },
+      right: { display: 'flex', alignItems: 'center', gap: '6px' },
+      navBtn: {
+        display: 'flex', alignItems: 'center', gap: '4px',
+        background: 'none', border: 'none', cursor: 'pointer',
+        fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 10px',
+        whiteSpace: 'nowrap',
+      },
+      createBtn: {
+        display: 'flex', alignItems: 'center', gap: '4px',
+        background: 'none', border: '1.5px solid #1a1a1a', borderRadius: '20px',
+        cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#1a1a1a',
+        padding: '6px 14px', whiteSpace: 'nowrap',
+      },
+      iconBtn: {
+        background: 'none', border: 'none', cursor: 'pointer', color: '#1a1a1a',
+        padding: '6px', display: 'flex', alignItems: 'center',
+      },
+      badge: {
+        position: 'absolute', top: '0', right: '-2px',
+        background: '#e53935', color: '#fff', fontSize: '10px', fontWeight: 700,
+        borderRadius: '10px', padding: '1px 5px', lineHeight: '14px',
+      },
+      avatarGroup: { display: 'flex', gap: '0', marginLeft: '4px' },
+      avatar: {
+        width: '28px', height: '28px', borderRadius: '50%',
+        border: '2px solid #fff', marginLeft: '-6px',
+      },
+    };
+
+    // -----------------------------------------------------------------------
+    // Left Sidebar
+    // -----------------------------------------------------------------------
+    function Sidebar({ activePage }) {
+      const NAV = [
+        { id: 'home', label: 'Home', icon: Icons.home },
+        { id: 'live', label: 'Live now', icon: Icons.live },
+        { id: 'genres', label: 'Genres', icon: Icons.genres },
+        { id: 'trending', label: 'Trending', icon: Icons.trending },
+        { id: 'library', label: 'Library', icon: Icons.library },
+        { id: 'community', label: 'Community', icon: Icons.community },
+      ];
+
+      const LIVE_USERS = [
+        { color: '#d32f2f', label: 'R 303', live: true },
+        { color: '#c8e600', label: '', live: true },
+        { color: '#333', label: '', live: true },
+        { color: '#e8c0a0', label: '', live: false },
+        { color: '#b0d860', label: '', live: false },
+        { color: '#4caf50', label: '', live: false },
+        { color: '#5060ff', label: '', live: false },
+        { color: '#e040a0', label: '', live: false },
+        { color: '#f0d020', label: '', live: false },
+      ];
+
+      return (
+        <nav style={sideS.bar}>
+          <div style={sideS.navItems}>
+            {NAV.map(item => {
+              const active = item.id === activePage;
+              return (
+                <a key={item.id} href="#" style={{
+                  ...sideS.navItem,
+                  color: active ? '#1a1a1a' : '#888',
+                  fontWeight: active ? 600 : 400,
+                }} onClick={(e) => e.preventDefault()}>
+                  <item.icon />
+                  <span style={sideS.navLabel}>{item.label}</span>
+                </a>
+              );
+            })}
+          </div>
+          <div style={sideS.liveSection}>
+            {LIVE_USERS.map((u, i) => (
+              <div key={i} style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ ...sideS.userAvatar, background: u.color }}>
+                  {u.label && <span style={{ fontSize: '8px', fontWeight: 700, color: '#fff' }}>{u.label}</span>}
+                </div>
+                {u.live && <span style={sideS.liveBadge}>LIVE</span>}
+              </div>
+            ))}
+          </div>
+        </nav>
+      );
+    }
+
+    const sideS = {
+      bar: {
+        position: 'fixed', top: '56px', left: 0, bottom: 0, width: '88px',
+        background: '#fff', borderRight: '1px solid #eee', zIndex: 150,
+        display: 'flex', flexDirection: 'column',
+        overflowY: 'auto',
+      },
+      navItems: {
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        paddingTop: '12px', gap: '4px',
+      },
+      navItem: {
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+        textDecoration: 'none', padding: '10px 8px', borderRadius: '8px',
+        fontSize: '11px', cursor: 'pointer', width: '72px', textAlign: 'center',
+        transition: 'background 0.1s',
+      },
+      navLabel: { lineHeight: '1.2' },
+      liveSection: {
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: '8px', paddingTop: '16px', borderTop: '1px solid #eee',
+        marginTop: '8px', paddingBottom: '16px',
+      },
+      userAvatar: {
+        width: '44px', height: '44px', borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      liveBadge: {
+        position: 'absolute', bottom: '-2px',
+        background: '#4caf50', color: '#fff', fontSize: '8px', fontWeight: 700,
+        borderRadius: '4px', padding: '1px 4px', lineHeight: '12px',
+        border: '1.5px solid #fff',
+      },
+    };
+
+    // -----------------------------------------------------------------------
+    // Genre Search Bar (in page content)
+    // -----------------------------------------------------------------------
+    function GenreSearchBar({ genres, onSelect }) {
+      const [query, setQuery] = useState('');
+      const [open, setOpen] = useState(false);
+      const [highlightIdx, setHighlightIdx] = useState(0);
+      const inputRef = useRef(null);
+      const wrapperRef = useRef(null);
+
+      const filtered = useMemo(() => {
+        if (!query.trim()) return [];
+        const q = query.toLowerCase();
+        return genres.filter(g => g.name.toLowerCase().includes(q)).slice(0, 12);
+      }, [genres, query]);
+
+      useEffect(() => { setHighlightIdx(0); }, [filtered]);
+      useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+      }, [open]);
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && filtered[highlightIdx]) { e.preventDefault(); onSelect(filtered[highlightIdx].slug); setQuery(''); setOpen(false); }
+        else if (e.key === 'Escape') { setOpen(false); }
+      };
+
+      return (
+        <div ref={wrapperRef} style={{ position: 'relative', marginBottom: '24px' }}>
+          <div style={searchBarS.bar}>
+            <Icons.search size={18} color="#999" />
+            <input ref={inputRef} value={query}
+              onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => { if (query.trim()) setOpen(true); }}
+              onKeyDown={handleKeyDown}
+              placeholder="Search for a genre or tag" style={searchBarS.input} />
+          </div>
+          {open && filtered.length > 0 && (
+            <div style={searchBarS.dropdown}>
+              {filtered.map((g, i) => (
+                <div key={g.slug}
+                  onClick={() => { onSelect(g.slug); setQuery(''); setOpen(false); }}
+                  onMouseEnter={() => setHighlightIdx(i)}
+                  style={{ ...searchBarS.dropdownItem, ...(i === highlightIdx ? { background: '#f5f5f5' } : {}) }}>
+                  {g.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const searchBarS = {
+      bar: { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderRadius: '8px', border: '1px solid #ddd', background: '#fff' },
+      input: { flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', color: '#1a1a1a' },
+      dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', background: '#fff', border: '1px solid #ddd', borderRadius: '8px', maxHeight: '300px', overflowY: 'auto', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.1)' },
+      dropdownItem: { padding: '10px 16px', cursor: 'pointer', fontSize: '14px', color: '#333' },
+    };
+
+    // -----------------------------------------------------------------------
+    // Discovery genre picker (multi-select)
+    // -----------------------------------------------------------------------
+    function GenrePicker({ genres, selectedSlugs, onToggle }) {
+      const [query, setQuery] = useState('');
+      const [open, setOpen] = useState(false);
+      const [highlightIdx, setHighlightIdx] = useState(0);
+      const inputRef = useRef(null);
+      const wrapperRef = useRef(null);
+
+      const selectedGenres = useMemo(() => genres.filter(g => selectedSlugs.includes(g.slug)), [genres, selectedSlugs]);
+      const filtered = useMemo(() => {
+        const pool = genres.filter(g => !selectedSlugs.includes(g.slug));
+        if (!query.trim()) return pool;
+        return pool.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+      }, [genres, query, selectedSlugs]);
+
+      useEffect(() => { setHighlightIdx(0); }, [filtered]);
+      useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+      }, [open]);
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIdx(i => Math.min(i + 1, filtered.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightIdx(i => Math.max(i - 1, 0)); }
+        else if (e.key === 'Enter' && filtered[highlightIdx]) { e.preventDefault(); onToggle(filtered[highlightIdx].slug); setQuery(''); }
+        else if (e.key === 'Backspace' && query === '' && selectedSlugs.length > 0) { onToggle(selectedSlugs[selectedSlugs.length - 1]); }
+        else if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur(); }
+      };
+
+      return (
+        <div ref={wrapperRef} style={pickS.wrapper}>
+          <div style={pickS.inputArea} onClick={() => inputRef.current?.focus()}>
+            {selectedGenres.map(g => (
+              <span key={g.slug} style={pickS.tag}>
+                {g.name}
+                <button onClick={(e) => { e.stopPropagation(); onToggle(g.slug); }}
+                  style={pickS.tagRemove} aria-label={'Remove ' + g.name}>×</button>
+              </span>
+            ))}
+            <input ref={inputRef} value={query}
+              onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => setOpen(true)} onKeyDown={handleKeyDown}
+              placeholder={selectedSlugs.length === 0 ? 'Search genres...' : 'Add more...'}
+              style={pickS.input} aria-label="Search genres" />
+          </div>
+          {open && filtered.length > 0 && (
+            <div style={pickS.dropdown}>
+              {filtered.slice(0, 20).map((g, i) => (
+                <div key={g.slug}
+                  onClick={() => { onToggle(g.slug); setQuery(''); inputRef.current?.focus(); }}
+                  onMouseEnter={() => setHighlightIdx(i)}
+                  style={{ ...pickS.dropdownItem, ...(i === highlightIdx ? { background: '#f5f5f5' } : {}) }}>
+                  {g.name}
+                </div>
+              ))}
+              {filtered.length > 20 && (
+                <div style={{ padding: '8px 16px', fontSize: '12px', color: '#999', borderTop: '1px solid #eee' }}>
+                  {filtered.length - 20} more — keep typing to narrow down
+                </div>
+              )}
+            </div>
+          )}
+          {open && query.trim() && filtered.length === 0 && (
+            <div style={pickS.dropdown}>
+              <div style={{ padding: '12px 16px', fontSize: '13px', color: '#999' }}>No genres match "{query}"</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const pickS = {
+      wrapper: { position: 'relative', marginBottom: '16px', maxWidth: '500px' },
+      inputArea: {
+        display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center',
+        padding: '8px 12px', borderRadius: '24px', border: '1px solid #ccc',
+        background: '#fff', minHeight: '44px', cursor: 'text',
+      },
+      tag: {
+        display: 'inline-flex', alignItems: 'center', gap: '4px',
+        padding: '4px 10px', borderRadius: '16px',
+        background: '#1a1a1a', color: '#fff', fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap',
+      },
+      tagRemove: { background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: '16px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 },
+      input: { flex: 1, minWidth: '120px', border: 'none', outline: 'none', background: 'transparent', color: '#1a1a1a', fontSize: '14px', padding: '4px 0' },
+      dropdown: {
+        position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+        background: '#fff', border: '1px solid #ddd', borderRadius: '12px',
+        maxHeight: '280px', overflowY: 'auto', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+      },
+      dropdownItem: { padding: '10px 16px', cursor: 'pointer', fontSize: '14px', color: '#333' },
+    };
+
+    // -----------------------------------------------------------------------
+    // Genres Page
+    // -----------------------------------------------------------------------
+    function GenresPage({ onNavigate }) {
+      const [genres, setGenres] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [selectedSlugs, setSelectedSlugs] = useState([]);
+      const [discovering, setDiscovering] = useState(false);
+      const [noResults, setNoResults] = useState(false);
+      const [error, setError] = useState(null);
+
+      useEffect(() => {
+        gqlQuery(GENRE_LIST_QUERY)
+          .then(data => { setGenres(data.tags || []); setLoading(false); })
+          .catch(() => { setError('Failed to load genres.'); setLoading(false); });
+      }, []);
+
+      const topGenres = useMemo(() => TOP_GENRES.map(slug => genres.find(g => g.slug === slug)).filter(Boolean), [genres]);
+
+      const toggleGenre = useCallback((slug) => {
+        setSelectedSlugs(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+        setNoResults(false);
+      }, []);
+
+      const handleGo = useCallback(() => {
+        if (selectedSlugs.length === 0) return;
+        setDiscovering(true); setNoResults(false); setError(null);
+        sessionStorage.setItem('lastGenres', JSON.stringify(selectedSlugs));
+        sessionStorage.setItem('seenShowSlugs', JSON.stringify([]));
+        gqlQuery(DISCOVER_SHOW_QUERY, { genreSlugs: selectedSlugs })
+          .then(data => {
+            setDiscovering(false);
+            if (data.discoverShow) {
+              const s = data.discoverShow;
+              sessionStorage.setItem('seenShowSlugs', JSON.stringify([s.slug]));
+              onNavigate('show', { username: s.ownerInfo.username, slug: s.slug, name: s.name, displayName: s.ownerInfo.displayName, qualityScore: s.qualityScore, playCount: s.playCount });
+            } else { setNoResults(true); }
+          })
+          .catch(() => { setDiscovering(false); setError('Something went wrong.'); });
+      }, [selectedSlugs, onNavigate]);
+
+      const handleSearchSelect = useCallback((slug) => {
+        setSelectedSlugs(prev => prev.includes(slug) ? prev : [...prev, slug]);
+      }, []);
+
+      if (loading) return <div style={pgS.content}><div style={{ background: '#eee', borderRadius: 4, width: 200, height: 32, animation: 'pulse 1.5s ease infinite' }} /></div>;
+
+      return (
+        <div style={pgS.content}>
+          <h1 style={pgS.title}>Genres &amp; Tags</h1>
+          <GenreSearchBar genres={genres} onSelect={handleSearchSelect} />
+          <div style={pgS.chipGrid}>
+            {topGenres.map(g => (
+              <a key={g.slug} href="#"
+                onClick={(e) => { e.preventDefault(); handleSearchSelect(g.slug); }}
+                style={pgS.chip}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#e8e8e8'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f0f0'; }}>
+                {g.name.toLowerCase()}
+              </a>
+            ))}
+          </div>
+          <hr style={pgS.divider} />
+          <h2 style={pgS.sectionTitle}>or let us find something for you</h2>
+          <p style={pgS.sectionSub}>Choose one or more genres below and we'll find you a show to listen to</p>
+          <GenrePicker genres={genres} selectedSlugs={selectedSlugs} onToggle={toggleGenre} />
+          <button onClick={handleGo}
+            disabled={selectedSlugs.length === 0 || discovering}
+            style={{ ...pgS.goButton, ...(selectedSlugs.length === 0 || discovering ? pgS.goButtonDisabled : {}) }}>
+            {discovering ? 'Finding...' : 'Go'}
+          </button>
+          {error && <p style={{ color: '#d32f2f', fontSize: 14, marginTop: 12 }}>{error}</p>}
+          {noResults && <p style={{ color: '#999', fontSize: 14, marginTop: 12 }}>No shows found for that combination. Try fewer genres or different ones.</p>}
+        </div>
+      );
+    }
+
+    const pgS = {
+      content: { padding: '32px 40px', maxWidth: '960px' },
+      title: { fontSize: '28px', fontWeight: 700, color: '#1a1a1a', marginBottom: '24px' },
+      chipGrid: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+      chip: { display: 'inline-block', padding: '8px 18px', borderRadius: '20px', background: '#f0f0f0', color: '#1a1a1a', fontSize: '14px', textDecoration: 'none', transition: 'background 0.15s', whiteSpace: 'nowrap' },
+      divider: { border: 'none', borderTop: '1px solid #e5e5e5', margin: '36px 0' },
+      sectionTitle: { fontSize: '22px', fontWeight: 600, color: '#1a1a1a', marginBottom: '6px' },
+      sectionSub: { fontSize: '14px', color: '#888', marginBottom: '20px' },
+      goButton: { padding: '10px 28px', borderRadius: '6px', border: 'none', background: '#1a1a1a', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer' },
+      goButtonDisabled: { opacity: 0.3, cursor: 'not-allowed' },
+    };
+
+    // -----------------------------------------------------------------------
+    // Fake waveform generator
+    // -----------------------------------------------------------------------
+    function Waveform() {
+      const bars = useMemo(() => {
+        const b = [];
+        for (let i = 0; i < 200; i++) {
+          const h = 8 + Math.random() * 52 + Math.sin(i * 0.08) * 15 + Math.sin(i * 0.03) * 10;
+          b.push(Math.max(6, Math.min(65, h)));
+        }
+        return b;
+      }, []);
+      return (
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5px', height: '70px', width: '100%' }}>
+          {bars.map((h, i) => (
+            <div key={i} style={{
+              flex: 1, height: h + '%', minWidth: '2px',
+              background: i < 140 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.25)',
+              borderRadius: '1px',
+            }} />
+          ))}
+        </div>
+      );
+    }
+
+    // -----------------------------------------------------------------------
+    // Show Page (Mixcloud-style)
+    // -----------------------------------------------------------------------
+    function ShowPage({ show, onNavigate }) {
+      const [rerolling, setRerolling] = useState(false);
+      const savedGenres = JSON.parse(sessionStorage.getItem('lastGenres') || '[]');
+      const savedGenreNames = useMemo(() => {
+        try { return JSON.parse(sessionStorage.getItem('lastGenreNames') || '[]'); }
+        catch { return savedGenres; }
+      }, []);
+
+      const handleReroll = useCallback(() => {
+        if (savedGenres.length === 0) return;
+        setRerolling(true);
+        const seenSlugs = JSON.parse(sessionStorage.getItem('seenShowSlugs') || '[]');
+        gqlQuery(DISCOVER_SHOW_QUERY, { genreSlugs: savedGenres, excludeSlugs: seenSlugs })
+          .then(data => {
+            setRerolling(false);
+            if (data.discoverShow) {
+              const s = data.discoverShow;
+              const updated = [...seenSlugs, s.slug];
+              sessionStorage.setItem('seenShowSlugs', JSON.stringify(updated));
+              onNavigate('show', { username: s.ownerInfo.username, slug: s.slug, name: s.name, displayName: s.ownerInfo.displayName, qualityScore: s.qualityScore, playCount: s.playCount });
+            }
+          }).catch(() => setRerolling(false));
+      }, [savedGenres, onNavigate]);
+
+      const plays = show.playCount ? Number(show.playCount).toLocaleString() : '0';
+      const quality = show.qualityScore ? (show.qualityScore).toFixed(2) : '0.00';
+      const fakeMinutes = show.playCount ? Math.round(show.playCount * 2.1) : 5000;
+      const fakeFavs = Math.max(1, Math.round((show.playCount || 100) * 0.003));
+      const duration = Math.floor(30 + Math.random() * 60) + ':' + String(Math.floor(Math.random() * 60)).padStart(2, '0');
+
+      return (
+        <div>
+          {/* Hero section — dark bg with show info + artwork */}
+          <div style={sp.hero}>
+            <div style={sp.heroInner}>
+              <div style={sp.heroLeft}>
+                {/* Play button */}
+                <div style={sp.playBtn}>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="#1a1a1a"><polygon points="5,3 19,12 5,21" /></svg>
+                </div>
+                {/* Title & stats */}
+                <div style={{ flex: 1 }}>
+                  <h1 style={sp.heroTitle}>{show.name}</h1>
+                  <p style={sp.heroStats}>
+                    <span>▶ {fakeMinutes.toLocaleString()} mins played</span>
+                    <span style={sp.dot}>•</span>
+                    <span>♥ {fakeFavs} favorites</span>
+                    <span style={sp.dot}>•</span>
+                    <span>↻ 1 repost</span>
+                    <span style={sp.dot}>•</span>
+                    <span>3 years ago</span>
+                    <span style={{ color: '#666', marginLeft: '12px' }}>[{quality}] • 320 • {plays}</span>
+                  </p>
+                </div>
+              </div>
+              {/* Album art */}
+              <div style={sp.artworkWrap}>
+                <div style={sp.artwork}>
+                  <span style={{ fontSize: 64, color: 'rgba(0,0,0,0.15)' }}>♫</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={sp.actions}>
+              {[
+                { icon: '♡', label: 'Favorite' },
+                { icon: '↻', label: 'Repost' },
+                { icon: '↗', label: 'Share' },
+                { icon: '⊕', label: 'Add to' },
+              ].map(a => (
+                <button key={a.label} style={sp.actionBtn}>
+                  <span style={{ fontSize: '16px' }}>{a.icon}</span> {a.label}
+                </button>
+              ))}
+              <button style={sp.moreBtn}>⋯</button>
+            </div>
+
+            {/* Waveform */}
+            <div style={sp.waveformWrap}>
+              <Waveform />
+              <span style={sp.duration}>{duration}</span>
+            </div>
+
+            {/* Comment bar */}
+            <div style={sp.commentBar}>
+              <div style={sp.commentAvatar}>M→X</div>
+              <span style={{ color: '#999', fontSize: '14px', flex: 1 }}>Write a comment</span>
+              <span style={{ color: '#666', fontSize: '18px', display: 'flex', gap: '12px' }}>
+                <span>☺</span><span>▷</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Creator section */}
+          <div style={sp.creatorSection}>
+            <div style={sp.creatorLeft}>
+              <div style={sp.creatorAvatar}>
+                <span style={{ fontSize: '24px', color: '#999' }}>♫</span>
+              </div>
+              <div>
+                <p style={sp.creatorName}>{show.displayName || show.username}</p>
+                <p style={sp.creatorFollowers}>{Math.floor(100 + Math.random() * 900)} followers</p>
+              </div>
+            </div>
+            <button style={sp.followingBtn}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+              Following
+              <Icons.chevron />
+            </button>
+          </div>
+
+          {/* Tags + sidebar */}
+          <div style={sp.belowCreator}>
+            <div style={sp.mainCol}>
+              {/* Genre tags */}
+              <div style={sp.tagRow}>
+                {savedGenres.map(slug => (
+                  <span key={slug} style={sp.tagChip}>{slug.replace(/-/g, ' ')}</span>
+                ))}
+                {savedGenres.length === 0 && <span style={sp.tagChip}>mixed</span>}
+              </div>
+
+              {/* Description */}
+              <p style={{ fontSize: '14px', color: '#666', marginTop: '16px' }}>Enjoy!</p>
+
+              {/* Discovery buttons */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #eee' }}>
+                {savedGenres.length > 0 && (
+                  <button onClick={handleReroll} disabled={rerolling}
+                    style={{ ...sp.discoverBtn, ...(rerolling ? { opacity: 0.5 } : {}) }}>
+                    {rerolling ? 'Finding...' : 'Discover another'}
+                  </button>
+                )}
+                <button onClick={() => onNavigate('home')} style={sp.backBtn}>Back to genres</button>
+              </div>
+            </div>
+
+            {/* Listeners sidebar */}
+            <div style={sp.sideCol}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>Listeners ({Math.max(1, Math.floor((show.playCount || 50) * 0.026))})</span>
+                <a href="#" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none' }}>See all</a>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} style={{
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: ['#e8a0c0','#607080','#90b060','#c0a070','#6080c0','#d06060','#50a0a0'][i],
+                  }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', marginBottom: '12px' }}>
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>Favorited by ({fakeFavs})</span>
+                <a href="#" style={{ fontSize: '13px', color: '#1a1a1a', textDecoration: 'none' }}>See all</a>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{
+                    width: '44px', height: '44px', borderRadius: '50%',
+                    background: ['#a080d0','#d0a050','#50b0a0','#c07070','#7090c0'][i],
+                  }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const sp = {
+      hero: { background: '#1a1a1a', padding: '0' },
+      heroInner: {
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        padding: '40px 40px 24px', gap: '24px',
+      },
+      heroLeft: { display: 'flex', alignItems: 'flex-start', gap: '20px', flex: 1 },
+      playBtn: {
+        width: '72px', height: '72px', borderRadius: '50%', background: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', flexShrink: 0, paddingLeft: '4px',
+      },
+      heroTitle: { fontSize: '24px', fontWeight: 700, color: '#fff', margin: '0 0 8px', lineHeight: 1.2 },
+      heroStats: { fontSize: '13px', color: '#ccc', display: 'flex', flexWrap: 'wrap', gap: '0', alignItems: 'center' },
+      dot: { margin: '0 8px', color: '#666' },
+      artworkWrap: { flexShrink: 0 },
+      artwork: {
+        width: '200px', height: '200px', borderRadius: '4px', background: '#f0f0f0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      actions: {
+        display: 'flex', gap: '8px', padding: '0 40px 24px',
+        alignItems: 'center',
+      },
+      actionBtn: {
+        display: 'flex', alignItems: 'center', gap: '6px',
+        padding: '8px 18px', borderRadius: '24px', border: '1px solid #444',
+        background: 'transparent', color: '#fff', fontSize: '13px', fontWeight: 500,
+        cursor: 'pointer', whiteSpace: 'nowrap',
+      },
+      moreBtn: {
+        width: '38px', height: '38px', borderRadius: '50%', border: '1px solid #444',
+        background: 'transparent', color: '#fff', fontSize: '18px',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      waveformWrap: {
+        position: 'relative', padding: '0 40px 8px', background: '#1a1a1a',
+      },
+      duration: {
+        position: 'absolute', bottom: '12px', right: '44px',
+        color: '#999', fontSize: '12px',
+      },
+      commentBar: {
+        display: 'flex', alignItems: 'center', gap: '12px',
+        padding: '12px 40px', background: '#2a2a2a',
+      },
+      commentAvatar: {
+        width: '32px', height: '32px', borderRadius: '50%', background: '#f0f0f0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '8px', fontWeight: 800, color: '#1a1a1a', flexShrink: 0,
+      },
+      creatorSection: {
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '20px 40px', background: '#f5f5f5', borderBottom: '1px solid #eee',
+      },
+      creatorLeft: { display: 'flex', alignItems: 'center', gap: '14px' },
+      creatorAvatar: {
+        width: '52px', height: '52px', borderRadius: '50%', background: '#e0e0e0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      },
+      creatorName: { fontSize: '16px', fontWeight: 700, color: '#1a1a1a', margin: 0 },
+      creatorFollowers: { fontSize: '13px', color: '#999', margin: '2px 0 0' },
+      followingBtn: {
+        display: 'flex', alignItems: 'center', gap: '6px',
+        padding: '8px 18px', borderRadius: '6px', border: '1px solid #ddd',
+        background: '#fff', color: '#1a1a1a', fontSize: '13px', fontWeight: 600,
+        cursor: 'pointer',
+      },
+      belowCreator: {
+        display: 'flex', gap: '40px', padding: '28px 40px',
+      },
+      mainCol: { flex: 1 },
+      sideCol: { width: '280px', flexShrink: 0 },
+      tagRow: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+      tagChip: {
+        display: 'inline-block', padding: '6px 16px', borderRadius: '20px',
+        border: '1px solid #ddd', background: '#fff', color: '#1a1a1a',
+        fontSize: '13px', textTransform: 'capitalize',
+      },
+      discoverBtn: {
+        padding: '10px 24px', borderRadius: '6px', border: 'none',
+        background: '#1a1a1a', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+      },
+      backBtn: {
+        padding: '10px 24px', borderRadius: '6px', border: '1px solid #ddd',
+        background: '#fff', color: '#1a1a1a', fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+      },
+    };
+
+    // -----------------------------------------------------------------------
+    // App (with shell)
+    // -----------------------------------------------------------------------
+    function App() {
+      const [page, setPage] = useState('home');
+      const [showData, setShowData] = useState(null);
+
+      const handleNavigate = useCallback((target, data) => {
+        if (target === 'show') { setShowData(data); setPage('show'); }
+        else { setPage('home'); }
+        window.scrollTo(0, 0);
+      }, []);
+
+      const showSidebar = page === 'home';
+
+      return (
+        <div style={{ minHeight: '100vh' }}>
+          <TopHeader />
+          {showSidebar && <Sidebar activePage="genres" />}
+          <div style={{ marginLeft: showSidebar ? '88px' : '0', marginTop: '56px' }}>
+            {page === 'home' && <GenresPage onNavigate={handleNavigate} />}
+            {page === 'show' && showData && <ShowPage show={showData} onNavigate={handleNavigate} key={showData.slug} />}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
+{% endverbatim %}
